@@ -2,24 +2,8 @@
 #define SPECTRAL_GRAPH_H
 
 #include <vector>
-
-/**
- * @brief Structure to represent a node in the spectral graph.
- */
-struct GraphNode {
-    int index;
-    float frequency;
-    float magnitude;
-};
-
-/**
- * @brief Structure to represent an edge in the spectral graph.
- */
-struct GraphEdge {
-    int nodeA;
-    int nodeB;
-    float weight;
-};
+#include "GraphEdge.h"
+#include "GraphNode.h"
 
 /**
  * @brief Class to represent a spectral graph built from FFT magnitudes.

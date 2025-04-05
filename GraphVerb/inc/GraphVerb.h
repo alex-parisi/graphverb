@@ -4,6 +4,7 @@
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_processors/juce_audio_processors.h>
 
+#include "CommunityClustering.h"
 #include "SpectralAnalyzer.h"
 #include "SpectralGraph.h"
 
@@ -88,11 +89,11 @@ public:
 
         /// Retrieve the latest magnitude spectrum for further processing.
         const auto &magnitudes = spectralAnalyzer.getLatestMagnitudes();
-        /// Use 'magnitudes' for further processing like graph construction or
-        /// UI updates.
         spectralGraph.buildGraph(magnitudes,
                                  static_cast<float>(getSampleRate()), 1 << 10);
-
+        int numClusters = 4;
+        auto clusterAssignments = CommunityClustering::clusterNodes(
+                spectralGraph.nodes, numClusters);
         /// Pass the audio through unchanged (or process it as needed).
     }
 
@@ -185,6 +186,9 @@ private:
 
     /** Spectral graph for storing the graph structure */
     SpectralGraph spectralGraph;
+
+    /** Community clustering algorithm for clustering nodes */
+    CommunityClustering clustering;
 
     /**
      * @brief Create the parameter layout for the processor.
