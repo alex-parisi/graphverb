@@ -4,6 +4,8 @@
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_processors/juce_audio_processors.h>
 
+#include "SpectralAnalyzer.h"
+
 /**
  * @brief Audio processor for the GraphVerb plugin.
  */
@@ -19,7 +21,8 @@ public:
                                .withOutput("Output",
                                            juce::AudioChannelSet::stereo(),
                                            true)),
-        parameters(*this, nullptr, "PARAMETERS", createParameterLayout()) {}
+        parameters(*this, nullptr, "PARAMETERS", createParameterLayout()),
+        spectralAnalyzer(10, 512) {}
 
     /**
      * @brief Destructor for the GraphVerb processor.
@@ -31,7 +34,9 @@ public:
      * @param sampleRate The sample rate of the audio stream.
      * @param samplesPerBlock The number of samples per block to process.
      */
-    void prepareToPlay(double sampleRate, int samplesPerBlock) override {}
+    void prepareToPlay(double sampleRate, int samplesPerBlock) override {
+        spectralAnalyzer.reset();
+    }
 
     /**
      * @brief Release any resources used by the processor.
@@ -57,9 +62,35 @@ public:
      * @brief Process a block of audio and MIDI data.
      */
     void processBlock(juce::AudioBuffer<float> &buffer,
-                      juce::MidiBuffer &midiMessages) override {
-        /// Clear output buffer
-        buffer.clear();
+                                 juce::MidiBuffer &midiMessages) override {
+        /// Retrieve the number of samples and channels.
+        const int numSamples = buffer.getNumSamples();
+        const int numChannels = buffer.getNumChannels();
+
+        /// Create a temporary buffer for the mono signal.
+        std::vector<float> monoBuffer(numSamples, 0.0f);
+
+        /// If stereo, average the channels; if mono, use the existing channel.
+        if (numChannels >= 2) {
+            auto *leftChannel = buffer.getReadPointer(0);
+            auto *rightChannel = buffer.getReadPointer(1);
+            for (int i = 0; i < numSamples; ++i)
+                monoBuffer[i] = 0.5f * (leftChannel[i] + rightChannel[i]);
+        } else {
+            /// If only one channel exists, copy it directly.
+            auto *channelData = buffer.getReadPointer(0);
+            std::copy_n(channelData, numSamples, monoBuffer.begin());
+        }
+
+        /// Push the combined mono samples into the spectral analyzer.
+        spectralAnalyzer.pushSamples(monoBuffer.data(), numSamples);
+
+        /// Retrieve the latest magnitude spectrum for further processing.
+        const auto &magnitudes = spectralAnalyzer.getLatestMagnitudes();
+        /// Use 'magnitudes' for further processing like graph construction or
+        /// UI updates.
+
+        /// Pass the audio through unchanged (or process it as needed).
     }
 
     /**
@@ -146,6 +177,9 @@ private:
     /** Audio processor value tree state for managing parameters. */
     juce::AudioProcessorValueTreeState parameters;
 
+    /** Spectral analyzer for performing the STFT */
+    SpectralAnalyzer spectralAnalyzer;
+
     /**
      * @brief Create the parameter layout for the processor.
      * @return The parameter layout for the processor.
@@ -157,6 +191,8 @@ private:
         /// Add the parameters
         layout.add(std::make_unique<juce::AudioParameterBool>("bypass",
                                                               "Bypass", false));
+        layout.add(std::make_unique<juce::AudioParameterFloat>(
+                "dryLevel", "Dry Level", 0.0f, 1.0f, 0.5f));
 
         return layout;
     }

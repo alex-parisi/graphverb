@@ -40,6 +40,7 @@ target_sources(GraphVerb PRIVATE
 
 target_include_directories(GraphVerb PRIVATE
         GraphVerb/inc
+        Components/SpectralAnalyzer/inc
 )
 
 target_compile_definitions(GraphVerb PRIVATE JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1)
@@ -49,4 +50,5 @@ target_link_libraries(GraphVerb PRIVATE
         juce::juce_audio_processors
         juce::juce_audio_utils
         juce::juce_gui_basics
+        juce::juce_dsp
 )
