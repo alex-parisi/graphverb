@@ -45,6 +45,7 @@ target_include_directories(GraphVerb PRIVATE
         Components/SpectralAnalyzer/inc
         Components/SpectralGraph/inc
         Components/CommunityClustering/inc
+        Components/CommunityReverb/inc
 )
 
 target_compile_definitions(GraphVerb PRIVATE JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1)

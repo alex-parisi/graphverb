@@ -5,6 +5,7 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 
 #include "CommunityClustering.h"
+#include "CommunityReverb.h"
 #include "SpectralAnalyzer.h"
 #include "SpectralGraph.h"
 
@@ -64,37 +65,106 @@ public:
      * @brief Process a block of audio and MIDI data.
      */
     void processBlock(juce::AudioBuffer<float> &buffer,
-                      juce::MidiBuffer &midiMessages) override {
-        /// Retrieve the number of samples and channels.
+                                 juce::MidiBuffer &midiMessages) override {
+        /// --- Stereo to Mono Conversion (as before) ---
         const int numSamples = buffer.getNumSamples();
         const int numChannels = buffer.getNumChannels();
-
-        /// Create a temporary buffer for the mono signal.
         std::vector<float> monoBuffer(numSamples, 0.0f);
 
-        /// If stereo, average the channels; if mono, use the existing channel.
         if (numChannels >= 2) {
             auto *leftChannel = buffer.getReadPointer(0);
             auto *rightChannel = buffer.getReadPointer(1);
             for (int i = 0; i < numSamples; ++i)
                 monoBuffer[i] = 0.5f * (leftChannel[i] + rightChannel[i]);
         } else {
-            /// If only one channel exists, copy it directly.
             auto *channelData = buffer.getReadPointer(0);
             std::copy_n(channelData, numSamples, monoBuffer.begin());
         }
 
-        /// Push the combined mono samples into the spectral analyzer.
+        /// --- Spectral Analysis and Graph Construction ---
         spectralAnalyzer.pushSamples(monoBuffer.data(), numSamples);
-
-        /// Retrieve the latest magnitude spectrum for further processing.
         const auto &magnitudes = spectralAnalyzer.getLatestMagnitudes();
         spectralGraph.buildGraph(magnitudes,
                                  static_cast<float>(getSampleRate()), 1 << 10);
-        int numClusters = 4;
-        auto clusterAssignments = CommunityClustering::clusterNodes(
-                spectralGraph.nodes, numClusters);
-        /// Pass the audio through unchanged (or process it as needed).
+
+        /// --- Community Detection via Clustering ---
+        constexpr int numClusters =
+                4; // This could be made adjustable via a parameter.
+        const std::vector<int> clusterAssignments =
+                CommunityClustering::clusterNodes(spectralGraph.nodes,
+                                                  numClusters);
+
+        /// --- Compute Average Energy per Cluster ---
+        std::vector<float> clusterEnergies(numClusters, 0.0f);
+        std::vector<int> clusterCounts(numClusters, 0);
+        for (size_t i = 0; i < spectralGraph.nodes.size(); ++i) {
+            const int cluster = clusterAssignments[i];
+            clusterEnergies[cluster] += spectralGraph.nodes[i].magnitude;
+            clusterCounts[cluster]++;
+        }
+        for (int i = 0; i < numClusters; ++i) {
+            if (clusterCounts[i] > 0)
+                clusterEnergies[i] /= static_cast<float>(clusterCounts[i]);
+            else
+                clusterEnergies[i] = 0.0f;
+        }
+
+        /// --- Initialize or Resize Community Reverb Modules ---
+        if (communityReverbs.size() != static_cast<size_t>(numClusters)) {
+            communityReverbs.clear();
+            for (int i = 0; i < numClusters; ++i) {
+                communityReverbs.push_back(std::make_unique<CommunityReverb>());
+            }
+        }
+
+        /// --- Update Each Community's Reverb Parameters ---
+        for (int i = 0; i < numClusters; ++i) {
+            communityReverbs[i]->updateParameters(clusterEnergies[i]);
+        }
+
+        /// --- Reverb Processing ---
+        // Create a wet buffer to accumulate the reverb outputs.
+        juce::AudioBuffer<float> wetBuffer;
+        wetBuffer.makeCopyOf(buffer);
+        wetBuffer.clear(); // Start with silence
+
+        /// Temporary buffer for processing each community's reverb.
+        juce::AudioBuffer<float> tempBuffer;
+        tempBuffer.makeCopyOf(buffer);
+
+        for (int i = 0; i < numClusters; ++i) {
+            /// Reset tempBuffer to the original dry signal.
+            tempBuffer.makeCopyOf(buffer);
+            /// Process tempBuffer through the community's reverb.
+            communityReverbs[i]->processBlock(tempBuffer);
+            /// Weight the processed signal by the community's energy.
+            const float weight =
+                    clusterEnergies[i]; /// This weight mapping can be refined.
+
+            /// Accumulate the weighted reverb output into the wet buffer.
+            for (int channel = 0; channel < wetBuffer.getNumChannels();
+                 ++channel) {
+                float *wetData = wetBuffer.getWritePointer(channel);
+                const float *tempData = tempBuffer.getWritePointer(channel);
+                for (int sample = 0; sample < wetBuffer.getNumSamples();
+                     ++sample) {
+                    wetData[sample] += weight * tempData[sample];
+                }
+            }
+        }
+
+        /// --- Mix Dry and Wet Signals ---
+        /// Retrieve the dry level parameter.
+        const float dryLevel = *parameters.getRawParameterValue("dryLevel");
+
+        for (int channel = 0; channel < buffer.getNumChannels(); ++channel) {
+            float *dryData = buffer.getWritePointer(channel);
+            const float *wetData = wetBuffer.getWritePointer(channel);
+            for (int sample = 0; sample < buffer.getNumSamples(); ++sample) {
+                dryData[sample] = dryLevel * dryData[sample] +
+                                  (1.0f - dryLevel) * wetData[sample];
+            }
+        }
     }
 
     /**
@@ -189,6 +259,8 @@ private:
 
     /** Community clustering algorithm for clustering nodes */
     CommunityClustering clustering;
+
+    std::vector<std::unique_ptr<CommunityReverb>> communityReverbs;
 
     /**
      * @brief Create the parameter layout for the processor.
