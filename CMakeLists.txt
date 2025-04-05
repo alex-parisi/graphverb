@@ -34,6 +34,8 @@ juce_add_plugin(GraphVerb
 )
 
 target_sources(GraphVerb PRIVATE
+        Components/SpectralAnalyzer/src/SpectralAnalyzer.cpp
+        Components/SpectralGraph/src/SpectralGraph.cpp
         GraphVerb/src/GraphVerb.cpp
         GraphVerb/src/GraphVerbEditor.cpp
 )
