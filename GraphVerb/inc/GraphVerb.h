@@ -5,6 +5,7 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 
 #include "SpectralAnalyzer.h"
+#include "SpectralGraph.h"
 
 /**
  * @brief Audio processor for the GraphVerb plugin.
@@ -62,7 +63,7 @@ public:
      * @brief Process a block of audio and MIDI data.
      */
     void processBlock(juce::AudioBuffer<float> &buffer,
-                                 juce::MidiBuffer &midiMessages) override {
+                      juce::MidiBuffer &midiMessages) override {
         /// Retrieve the number of samples and channels.
         const int numSamples = buffer.getNumSamples();
         const int numChannels = buffer.getNumChannels();
@@ -89,6 +90,8 @@ public:
         const auto &magnitudes = spectralAnalyzer.getLatestMagnitudes();
         /// Use 'magnitudes' for further processing like graph construction or
         /// UI updates.
+        spectralGraph.buildGraph(magnitudes,
+                                 static_cast<float>(getSampleRate()), 1 << 10);
 
         /// Pass the audio through unchanged (or process it as needed).
     }
@@ -179,6 +182,9 @@ private:
 
     /** Spectral analyzer for performing the STFT */
     SpectralAnalyzer spectralAnalyzer;
+
+    /** Spectral graph for storing the graph structure */
+    SpectralGraph spectralGraph;
 
     /**
      * @brief Create the parameter layout for the processor.

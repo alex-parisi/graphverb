@@ -41,6 +41,7 @@ target_sources(GraphVerb PRIVATE
 target_include_directories(GraphVerb PRIVATE
         GraphVerb/inc
         Components/SpectralAnalyzer/inc
+        Components/SpectralGraph/inc
 )
 
 target_compile_definitions(GraphVerb PRIVATE JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1)
