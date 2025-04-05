@@ -20,7 +20,7 @@ SpectralAnalyzer::SpectralAnalyzer(const int fftOrder, const int hopSizeIn) :
     /// Allocate FIFO buffer for the incoming time-domain samples.
     fifoBuffer.resize(fftSize, 0.0f);
     /// Allocate buffer for the FFT result (frequency domain).
-    frequencyDomainBuffer.resize(fftSize, 0.0f);
+    frequencyDomainBuffer.resize(2 * fftSize, 0.0f);
 }
 
 /**
@@ -79,7 +79,7 @@ void SpectralAnalyzer::processFrame() {
     /// Copy windowed data to the frequency domain buffer.
     std::copy_n(frame.begin(), fftSize, frequencyDomainBuffer.begin());
     /// Perform an in-place FFT. This uses a real-only FFT transform.
-    fft.performRealOnlyForwardTransform(frequencyDomainBuffer.data());
+    fft.performRealOnlyForwardTransform(frequencyDomainBuffer.data(), true);
     /// Compute magnitudes for the FFT bins.
     latestMagnitudes = computeMagnitudes();
 }
@@ -91,13 +91,11 @@ void SpectralAnalyzer::processFrame() {
  */
 std::vector<float> SpectralAnalyzer::computeMagnitudes() const {
     std::vector<float> magnitudes(fftSize / 2);
-    /// DC component (bin 0) is real.
+    /// DC component
     magnitudes[0] = std::abs(frequencyDomainBuffer[0]);
-    /// For bins 1 to N/2 - 1, compute the magnitude from the real and
-    /// imaginary parts.
     for (int i = 1; i < fftSize / 2; ++i) {
-        const float real = frequencyDomainBuffer[i];
-        const float imag = frequencyDomainBuffer[fftSize - i];
+        const float real = frequencyDomainBuffer[2 * i];
+        const float imag = frequencyDomainBuffer[2 * i + 1];
         magnitudes[i] = std::sqrt(real * real + imag * imag);
     }
     return magnitudes;
