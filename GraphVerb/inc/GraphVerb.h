@@ -99,7 +99,7 @@ public:
         clusterEnergies.resize(numClusters);
         std::vector<int> clusterCounts(numClusters, 0);
         for (size_t i = 0; i < spectralGraph.nodes.size(); ++i) {
-            int cluster = clusterAssignments[i];
+            const int cluster = clusterAssignments[i];
             clusterEnergies[cluster] += spectralGraph.nodes[i].magnitude;
             clusterCounts[cluster]++;
         }
@@ -268,6 +268,10 @@ public:
      */
     const std::vector<float> &getClusterEnergies() const {
         return clusterEnergies;
+    }
+
+    const std::vector<GraphNode> &getNodes() const {
+        return spectralGraph.nodes;
     }
 
 private:

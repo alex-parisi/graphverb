@@ -6,6 +6,7 @@
 #include "GraphVerb.h"
 #include "KnobComponent.h"
 #include "ScopeComponent.h"
+#include "ClusterVisualizer.h"
 
 /**
  * @brief Editor class for the GraphVerb processor.
@@ -48,6 +49,8 @@ private:
 
     /** Cluster energy view for visualizing cluster energies */
     ClusterEnergyView clusterEnergy;
+
+    ClusterVisualizer clusterVisualizer;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GraphVerbEditor)
 

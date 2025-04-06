@@ -7,14 +7,14 @@
  */
 GraphVerbEditor::GraphVerbEditor(GraphVerb &p) :
     AudioProcessorEditor(p), processor(p), scope(p.getAudioBufferQueue()),
-    clusterEnergy(p),
-    dryLevelKnob(p.getParameters(), "dryLevel", "Dry Level"),
+    clusterEnergy(p), clusterVisualizer(p), dryLevelKnob(p.getParameters(), "dryLevel", "Dry Level"),
     gainKnob(p.getParameters(), "gain", "Gain") {
 
     addAndMakeVisible(dryLevelKnob);
     addAndMakeVisible(gainKnob);
     addAndMakeVisible(scope);
     addAndMakeVisible(clusterEnergy);
+    addAndMakeVisible(clusterVisualizer);
 
     setSize(300, 400);
     setResizable(true, true);
@@ -43,11 +43,16 @@ void GraphVerbEditor::resized() {
     gainKnob.setBounds(
             controlArea.removeFromLeft(controlArea.getWidth()).reduced(10));
 
-    const juce::Rectangle<int> scopeArea = area.removeFromBottom(area.getHeight() / 3);
+    const juce::Rectangle<int> scopeArea =
+            area.removeFromBottom(area.getHeight() / 3);
     scope.setBounds(scopeArea.reduced(10));
 
-    const juce::Rectangle<int> clusterArea = area.removeFromBottom(area.getHeight() / 2);
+    const juce::Rectangle<int> clusterArea =
+            area.removeFromBottom(area.getHeight() / 2);
     clusterEnergy.setBounds(clusterArea.reduced(10));
+
+    const juce::Rectangle<int> nodeArea = area;
+    clusterVisualizer.setBounds(nodeArea.reduced(10));
 }
 
 /**

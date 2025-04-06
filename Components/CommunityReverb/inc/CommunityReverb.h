@@ -35,9 +35,12 @@ struct CommunityReverb {
      * @param avgEnergy Average magnitude (energy) for the community.
      */
     void updateParameters(const float avgEnergy) {
-        /// Example mapping: higher energy increases room size and wet level.
+        /// TODO - new plugin with N bandpass filters that get their own reverbs
+        /// TODO - add button to invert and use 1.0f - avgEnergy
+        /// TODO - change "Dry Level" button to "Liveliness" and invert it
         params.roomSize = juce::jlimit(0.0f, 1.0f, avgEnergy);
-        params.wetLevel = juce::jlimit(0.0f, 1.0f, avgEnergy * 0.8f);
+        /// TODO - map this to a knob?
+        params.wetLevel = juce::jlimit(0.0f, 1.0f, 0.8f);
         reverb.setParameters(params);
     }
 
