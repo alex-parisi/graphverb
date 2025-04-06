@@ -4,8 +4,10 @@
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_processors/juce_audio_processors.h>
 
+#include "AudioBufferQueue.h"
 #include "CommunityClustering.h"
 #include "CommunityReverb.h"
+#include "ScopeDataCollector.h"
 #include "SpectralAnalyzer.h"
 #include "SpectralGraph.h"
 
@@ -88,7 +90,7 @@ public:
                                  static_cast<float>(getSampleRate()), 1 << 10);
 
         // --- Community Detection ---
-        constexpr int numClusters = 4;
+        constexpr int numClusters = 10;
         const std::vector<int> clusterAssignments =
                 CommunityClustering::clusterNodes(spectralGraph.nodes,
                                                   numClusters);
@@ -104,7 +106,8 @@ public:
         for (int i = 0; i < numClusters; ++i) {
             clusterEnergies[i] =
                     clusterCounts[i] > 0
-                            ? (clusterEnergies[i] / clusterCounts[i])
+                            ? (clusterEnergies[i] /
+                               static_cast<float>(clusterCounts[i]))
                             : 0.0f;
         }
 
@@ -155,18 +158,20 @@ public:
         // --- Dry/Wet Mix ---
         float dryLevel = *parameters.getRawParameterValue("dryLevel");
 
+        auto* leftOutput = buffer.getWritePointer(0);
         for (int ch = 0; ch < buffer.getNumChannels(); ++ch) {
             float *dry = buffer.getWritePointer(ch);
             const float *wet = wetBuffer.getReadPointer(ch);
             for (int s = 0; s < buffer.getNumSamples(); ++s) {
                 float mixed = dryLevel * dry[s] + (1.0f - dryLevel) * wet[s];
-                // Optional: Apply soft clipping
-                dry[s] = std::tanh(mixed);
-
-                // Optional: safety check
+                dry[s] = std::tanh(mixed); // soft clipping
                 jassert(std::isfinite(dry[s]));
             }
         }
+
+        // 👇 Collect the final signal *after* the mix is written
+        scopeDataCollector.process(leftOutput,
+                                   static_cast<size_t>(buffer.getNumSamples()));
     }
 
     /**
@@ -244,6 +249,14 @@ public:
     void setStateInformation(const void *, int) override {}
 
     /**
+     * @brief Get the audio buffer queue.
+     * @return A reference to the audio buffer queue used for scope data
+     */
+    AudioBufferQueue<float> &getAudioBufferQueue() noexcept {
+        return audioBufferQueue;
+    }
+
+    /**
      * @brief Gets the value tree state for the parameters.
      * @return A reference to the AudioProcessorValueTreeState object.
      */
@@ -262,7 +275,14 @@ private:
     /** Community clustering algorithm for clustering nodes */
     CommunityClustering clustering;
 
+    /** Community reverb instances for each cluster */
     std::vector<std::unique_ptr<CommunityReverb>> communityReverbs;
+
+    /** Buffer for visualizing audio data. */
+    AudioBufferQueue<float> audioBufferQueue{};
+
+    /** Scope collector for visualizing audio data. */
+    ScopeDataCollector<float> scopeDataCollector{audioBufferQueue};
 
     /**
      * @brief Create the parameter layout for the processor.
@@ -277,6 +297,8 @@ private:
                                                               "Bypass", false));
         layout.add(std::make_unique<juce::AudioParameterFloat>(
                 "dryLevel", "Dry Level", 0.0f, 1.0f, 0.1f));
+        layout.add(std::make_unique<juce::AudioParameterFloat>(
+                "gain", "Gain", 0.0f, 1.0f, 0.5f));
 
         return layout;
     }
