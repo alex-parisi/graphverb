@@ -90,7 +90,7 @@ public:
                                  static_cast<float>(getSampleRate()), 1 << 10);
 
         // --- Community Detection ---
-        constexpr int numClusters = 10;
+        constexpr int numClusters = 12;
         const std::vector<int> clusterAssignments =
                 CommunityClustering::clusterNodes(spectralGraph.nodes,
                                                   numClusters);
