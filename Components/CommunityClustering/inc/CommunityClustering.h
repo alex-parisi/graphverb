@@ -96,6 +96,7 @@ public:
     }
 
 private:
+    /// TODO - use log spacing?
     static float distanceSquared(const GraphNode &node,
                                  const Centroid &centroid) {
         const float df = node.frequency - centroid.frequency;
