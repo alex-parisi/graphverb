@@ -49,6 +49,7 @@ target_include_directories(GraphVerb PRIVATE
         Components/CommunityReverb/inc
         Components/UI/Knob/inc
         Components/UI/Scope/inc
+        Components/UI/ClusterEnergy/inc
 )
 
 target_compile_definitions(GraphVerb PRIVATE JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1)

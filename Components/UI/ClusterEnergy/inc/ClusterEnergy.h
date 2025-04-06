@@ -1,0 +1,39 @@
+#ifndef CLUSTER_ENERGY_H
+#define CLUSTER_ENERGY_H
+
+#include <juce_gui_basics/juce_gui_basics.h>
+#include "GraphVerb.h"
+
+class ClusterEnergyView final : public juce::Component, juce::Timer {
+public:
+    explicit ClusterEnergyView(GraphVerb &p) : processor(p) {
+        startTimerHz(30);
+    }
+
+    void paint(juce::Graphics &g) override {
+        g.fillAll(juce::Colours::black);
+        const auto energies = processor.getClusterEnergies();
+        const int numClusters = static_cast<int>(energies.size());
+        const auto bounds = getLocalBounds().reduced(10);
+        const float barWidth = static_cast<float>(bounds.getWidth()) /
+                               static_cast<float>(numClusters);
+        for (int i = 0; i < numClusters; ++i) {
+            const float normHeight = juce::jlimit(0.0f, 1.0f, energies[i]);
+            const float barHeight =
+                    static_cast<float>(bounds.getHeight()) * normHeight;
+            const float barX = static_cast<float>(bounds.getX()) +
+                               static_cast<float>(i) * barWidth;
+            const float barY =
+                    static_cast<float>(bounds.getBottom()) - barHeight;
+            g.setColour(juce::Colours::aqua);
+            g.fillRect(barX, barY, barWidth - 2, barHeight);
+        }
+    }
+
+    void timerCallback() override { repaint(); }
+
+private:
+    GraphVerb &processor;
+};
+
+#endif // CLUSTER_ENERGY_H

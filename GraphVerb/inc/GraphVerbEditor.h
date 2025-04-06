@@ -2,6 +2,7 @@
 #define GRAPH_VERB_EDITOR_H
 
 #include <juce_audio_basics/juce_audio_basics.h>
+#include "ClusterEnergy.h"
 #include "GraphVerb.h"
 #include "KnobComponent.h"
 #include "ScopeComponent.h"
@@ -44,6 +45,9 @@ private:
 
     /** Waveform display for visualizing audio data */
     ScopeComponent<float> scope;
+
+    /** Cluster energy view for visualizing cluster energies */
+    ClusterEnergyView clusterEnergy;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GraphVerbEditor)
 

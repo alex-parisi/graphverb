@@ -96,7 +96,7 @@ public:
                                                   numClusters);
 
         // --- Compute Average Energy per Cluster ---
-        std::vector<float> clusterEnergies(numClusters, 0.0f);
+        clusterEnergies.resize(numClusters);
         std::vector<int> clusterCounts(numClusters, 0);
         for (size_t i = 0; i < spectralGraph.nodes.size(); ++i) {
             int cluster = clusterAssignments[i];
@@ -158,7 +158,7 @@ public:
         // --- Dry/Wet Mix ---
         float dryLevel = *parameters.getRawParameterValue("dryLevel");
 
-        auto* leftOutput = buffer.getWritePointer(0);
+        auto *leftOutput = buffer.getWritePointer(0);
         for (int ch = 0; ch < buffer.getNumChannels(); ++ch) {
             float *dry = buffer.getWritePointer(ch);
             const float *wet = wetBuffer.getReadPointer(ch);
@@ -262,6 +262,14 @@ public:
      */
     juce::AudioProcessorValueTreeState &getParameters() { return parameters; }
 
+    /**
+     * @brief Get the cluster energies.
+     * @return A reference to the vector of cluster energies.
+     */
+    const std::vector<float> &getClusterEnergies() const {
+        return clusterEnergies;
+    }
+
 private:
     /** Audio processor value tree state for managing parameters. */
     juce::AudioProcessorValueTreeState parameters;
@@ -274,6 +282,9 @@ private:
 
     /** Community clustering algorithm for clustering nodes */
     CommunityClustering clustering;
+
+    /** Vector to store the average energy of each cluster */
+    std::vector<float> clusterEnergies;
 
     /** Community reverb instances for each cluster */
     std::vector<std::unique_ptr<CommunityReverb>> communityReverbs;

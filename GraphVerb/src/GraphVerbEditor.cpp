@@ -7,12 +7,14 @@
  */
 GraphVerbEditor::GraphVerbEditor(GraphVerb &p) :
     AudioProcessorEditor(p), processor(p), scope(p.getAudioBufferQueue()),
+    clusterEnergy(p),
     dryLevelKnob(p.getParameters(), "dryLevel", "Dry Level"),
     gainKnob(p.getParameters(), "gain", "Gain") {
 
     addAndMakeVisible(dryLevelKnob);
     addAndMakeVisible(gainKnob);
     addAndMakeVisible(scope);
+    addAndMakeVisible(clusterEnergy);
 
     setSize(300, 400);
     setResizable(true, true);
@@ -43,6 +45,9 @@ void GraphVerbEditor::resized() {
 
     const juce::Rectangle<int> scopeArea = area.removeFromBottom(area.getHeight() / 3);
     scope.setBounds(scopeArea.reduced(10));
+
+    const juce::Rectangle<int> clusterArea = area.removeFromBottom(area.getHeight() / 2);
+    clusterEnergy.setBounds(clusterArea.reduced(10));
 }
 
 /**
