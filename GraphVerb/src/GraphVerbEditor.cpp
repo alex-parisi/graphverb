@@ -8,16 +8,18 @@
 GraphVerbEditor::GraphVerbEditor(GraphVerb &p) :
     AudioProcessorEditor(p), processor(p), scope(p.getAudioBufferQueue()),
     clusterEnergy(p), clusterVisualizer(p),
-    dryLevelKnob(p.getParameters(), "dryLevel", "Dry Level"),
+    livelinessKnob(p.getParameters(), "liveliness", "Liveliness"),
     gainKnob(p.getParameters(), "gain", "Gain"),
-    bypassButton(p.getParameters(), "bypass", "Bypass") {
+    bypassButton(p.getParameters(), "bypass", "Bypass"),
+    invertButton(p.getParameters(), "invert", "Invert") {
 
-    addAndMakeVisible(dryLevelKnob);
+    addAndMakeVisible(livelinessKnob);
     addAndMakeVisible(gainKnob);
     addAndMakeVisible(scope);
     addAndMakeVisible(clusterEnergy);
     addAndMakeVisible(clusterVisualizer);
     addAndMakeVisible(bypassButton);
+    addAndMakeVisible(invertButton);
 
     setSize(300, 400);
     setResizable(true, true);
@@ -41,12 +43,13 @@ void GraphVerbEditor::resized() {
     juce::Rectangle<int> area = getLocalBounds();
 
     juce::Rectangle<int> controlArea = area.removeFromBottom(100);
-    dryLevelKnob.setBounds(
-            controlArea.removeFromLeft(controlArea.getWidth() / 3).reduced(10));
-    gainKnob.setBounds(
-            controlArea.removeFromLeft(controlArea.getWidth() / 2).reduced(10));
+    livelinessKnob.setBounds(
+            controlArea.removeFromLeft(controlArea.getWidth() / 4));
+    gainKnob.setBounds(controlArea.removeFromLeft(controlArea.getWidth() / 3));
     bypassButton.setBounds(
-            controlArea.removeFromLeft(controlArea.getWidth()).reduced(10));
+            controlArea.removeFromLeft(controlArea.getWidth() / 2));
+    invertButton.setBounds(
+            controlArea.removeFromLeft(controlArea.getWidth() / 1));
 
     const juce::Rectangle<int> scopeArea =
             area.removeFromBottom(area.getHeight() / 3);

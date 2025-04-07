@@ -42,11 +42,12 @@ private:
     juce::TooltipWindow tooltipWindow;
 
     /** Knob components for various parameters */
-    KnobComponent dryLevelKnob;
+    KnobComponent livelinessKnob;
     KnobComponent gainKnob;
 
-    /** Button component for bypassing the effect */
+    /** Button components for interactivity */
     ButtonComponent bypassButton;
+    ButtonComponent invertButton;
 
     /** Waveform display for visualizing audio data */
     ScopeComponent<float> scope;

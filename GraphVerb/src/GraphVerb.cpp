@@ -96,8 +96,13 @@ void GraphVerb::processBlock(juce::AudioBuffer<float> &buffer,
         for (int i = 0; i < numClusters; ++i)
             communityReverbs.push_back(std::make_unique<CommunityReverb>());
     }
-    for (int i = 0; i < numClusters; ++i)
-        communityReverbs[i]->updateParameters(clusterEnergies[i]);
+    for (int i = 0; i < numClusters; ++i) {
+        if (*parameters.getRawParameterValue("invert") < 0.5f) {
+            communityReverbs[i]->updateParameters(clusterEnergies[i], false);
+        } else {
+            communityReverbs[i]->updateParameters(clusterEnergies[i], true);
+        }
+    }
 
     /// Prepare buffers
     juce::AudioBuffer<float> dryBuffer;
@@ -123,19 +128,20 @@ void GraphVerb::processBlock(juce::AudioBuffer<float> &buffer,
             }
         }
     } else {
-        // Bypass mode: wet = dry
+        /// Bypass mode: wet = dry
         wetBuffer.makeCopyOf(dryBuffer);
     }
 
     /// Dry/Wet mix
-    const float dryLevel = *parameters.getRawParameterValue("dryLevel");
+    const float liveliness = *parameters.getRawParameterValue("liveliness");
+    const float dryLevel = 1.0f - liveliness;
     const float gain = *parameters.getRawParameterValue("gain");
     const float dB = juce::jmap(gain, 0.0f, 1.0f, -60.0f, 12.0f);
     const float linearGain = juce::Decibels::decibelsToGain(dB);
     const auto *leftOutput = buffer.getWritePointer(0);
     for (int ch = 0; ch < buffer.getNumChannels(); ++ch) {
-        float* dry = buffer.getWritePointer(ch);
-        const float* wet = wetBuffer.getReadPointer(ch);
+        float *dry = buffer.getWritePointer(ch);
+        const float *wet = wetBuffer.getReadPointer(ch);
         for (int s = 0; s < buffer.getNumSamples(); ++s) {
             float mixed = dryLevel * dry[s] + (1.0f - dryLevel) * wet[s];
             /// Apply gain and tanh limiting
@@ -160,8 +166,10 @@ GraphVerb::createParameterLayout() {
     /// Add the parameters
     layout.add(std::make_unique<juce::AudioParameterBool>("bypass", "Bypass",
                                                           false));
+    layout.add(std::make_unique<juce::AudioParameterBool>("invert", "Invert",
+                                                          false));
     layout.add(std::make_unique<juce::AudioParameterFloat>(
-            "dryLevel", "Dry Level", 0.0f, 1.0f, 0.5f));
+            "liveliness", "Liveliness", 0.0f, 1.0f, 0.5f));
     layout.add(std::make_unique<juce::AudioParameterFloat>("gain", "Gain", 0.0f,
                                                            1.0f, 1.0f));
     return layout;
