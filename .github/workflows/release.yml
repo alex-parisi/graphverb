@@ -13,7 +13,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install Dependencies
         run: |
@@ -44,13 +44,13 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install Dependencies
-        run: choco install cmake ninja
+        run: choco install ninja
 
-      - name: Configure
-        run: cmake -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -G "Ninja" -B build -S .
+      - name: Configure (with MSVC)
+        run: cmake -DCMAKE_BUILD_TYPE=Release -G "Ninja" -B build -S .
 
       - name: Build
         run: cmake --build build --target Graphverb_All -j 6
@@ -71,12 +71,18 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install Dependencies
         run: |
           sudo apt update
-          sudo apt install -y cmake ninja-build build-essential libasound2-dev libjack-jackd2-dev
+          sudo apt install -y \
+          cmake ninja-build build-essential \
+          libasound2-dev libjack-jackd2-dev \
+          libx11-dev libfreetype6-dev libfontconfig1-dev \
+          libgl1-mesa-dev libcurl4-openssl-dev \
+          libxrandr-dev libxinerama-dev libxcursor-dev \
+          libxcomposite-dev libxext-dev
 
       - name: Configure
         run: cmake -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -G Ninja -B build -S .
