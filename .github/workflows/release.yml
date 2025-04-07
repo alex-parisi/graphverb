@@ -65,7 +65,7 @@ jobs:
           cd dist && zip -r Graphverb-macos.zip macos
           
           echo "Contents of ZIP:"
-          unzip -l dist/Graphverb-macos.zip
+          unzip -l Graphverb-macos.zip
 
       - name: Notarize Plugin
         uses: GuillaumeFalourd/xcode-notarize@v1
@@ -120,24 +120,27 @@ jobs:
   build-linux:
     runs-on: ubuntu-22.04
 
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Install Dependencies
         run: |
+          sudo apt update
           sudo apt install -y \
-          cmake ninja-build build-essential \
-          libasound2-dev libjack-jackd2-dev \
-          libx11-dev libfreetype6-dev libfontconfig1-dev \
-          libgl1-mesa-dev libcurl4-openssl-dev \
-          libxrandr-dev libxinerama-dev libxcursor-dev \
-          libxcomposite-dev libxext-dev \
-          libgtk2.0-dev  
+            cmake ninja-build build-essential \
+            libasound2-dev libjack-jackd2-dev \
+            libx11-dev libfreetype6-dev libfontconfig1-dev \
+            libgl1-mesa-dev libcurl4-openssl-dev \
+            libxrandr-dev libxinerama-dev libxcursor-dev \
+            libxcomposite-dev libxext-dev \
+            libgtk2.0-dev
 
       - name: Configure
-        run: cmake -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -G Ninja -B build -S .
+        run: |
+          cmake -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+                -DCMAKE_EXE_LINKER_FLAGS="-lcurl" \
+                -G Ninja -B build -S .
 
       - name: Build
         run: cmake --build build --target Graphverb_All -j 6
