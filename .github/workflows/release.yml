@@ -44,20 +44,22 @@ jobs:
 
           echo "Verifying Graphverb.app exists..."
           ls -l build/Graphverb_artefacts/Release/Standalone/Graphverb.app || exit 1
+          
+          codesign --display --verbose=4 build/Graphverb_artefacts/Release/Standalone/Graphverb.app
 
           echo "Signing standalone app..."
-          timeout 60s codesign --deep --force --verbose --options runtime \
+          codesign --deep --force --verbose --options runtime \
             --timestamp=http://timestamp.apple.com \
             --sign "Developer ID Application: ScribeNow LLC (NY)" \
             build/Graphverb_artefacts/Release/Standalone/Graphverb.app
 
           echo "Signing VST3..."
-          timeout 60s codesign --force --verbose --options runtime --timestamp=http://timestamp.apple.com \
+          codesign --deep --force --verbose --options runtime \
             --sign "Developer ID Application: ScribeNow LLC (NY)" \
             ~/Library/Audio/Plug-Ins/VST3/Graphverb.vst3 || echo "VST3 signing skipped or failed"
 
           echo "Signing AU..."
-          timeout 60s codesign --force --verbose --options runtime --timestamp=http://timestamp.apple.com \
+          codesign --deep --force --verbose --options runtime \
             --sign "Developer ID Application: ScribeNow LLC (NY)" \
             ~/Library/Audio/Plug-Ins/Components/Graphverb.component || echo "AU signing skipped or failed"
 
@@ -117,9 +119,9 @@ jobs:
 
       - name: Sign binaries
         shell: pwsh
-        env:
-          CERT_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
         run: |
+          $certPassword = "${{ secrets.MACOS_CERTIFICATE_PASSWORD }}"
+
           $signtool = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" `
             -latest -products * -requires Microsoft.Component.MSBuild `
             -find "**\signtool.exe"
@@ -130,11 +132,24 @@ jobs:
           }
 
           $filesToSign = Get-ChildItem -Recurse -Path build\Graphverb_artefacts\Release\ -Include *.exe, *.dll
+          
           foreach ($file in $filesToSign) {
-            Write-Host "Signing $($file.FullName)..."
-            & $signtool sign /f certificate.pfx /p $env:CERT_PASSWORD `
-              /tr http://timestamp.digicert.com /td sha256 /fd sha256 `
-              "$($file.FullName)"
+              Write-Host "Signing $($file.FullName)..."
+              $process = Start-Process -FilePath $signtool -ArgumentList @(
+                  "sign",
+                  "/nologo",
+                  "/f", "certificate.pfx",
+                  "/p", "$certPassword",
+                  "/tr", "http://timestamp.digicert.com",
+                  "/td", "sha256",
+                  "/fd", "sha256",
+                  "$($file.FullName)"
+              ) -Wait -PassThru -NoNewWindow
+          
+              if ($process.ExitCode -ne 0) {
+                  Write-Error "Failed to sign $($file.FullName)"
+                  exit $process.ExitCode
+              }
           }
 
       - name: Package
