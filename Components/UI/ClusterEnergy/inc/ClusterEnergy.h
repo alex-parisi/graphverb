@@ -12,7 +12,7 @@ public:
     }
 
     void paint(juce::Graphics &g) override {
-        g.fillAll(juce::Colours::black);
+        g.fillAll(juce::Colours::transparentBlack);
         const auto bounds = getLocalBounds().reduced(10);
         const int numClusters = static_cast<int>(smoothedEnergies.size());
         const float barWidth = static_cast<float>(bounds.getWidth()) /

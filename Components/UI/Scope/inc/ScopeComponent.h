@@ -44,7 +44,7 @@ public:
      * @param g The graphics context to use for painting.
      */
     void paint(juce::Graphics &g) override {
-        g.fillAll(juce::Colours::black);
+        g.fillAll(juce::Colours::transparentBlack);
         g.setColour(juce::Colours::white);
         const auto area = getLocalBounds();
         auto h = static_cast<SampleType>(area.getHeight());
