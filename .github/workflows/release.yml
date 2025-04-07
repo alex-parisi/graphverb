@@ -22,11 +22,17 @@ jobs:
       - name: Set up Code Signing Certificate
         run: |
           echo "$MACOS_CERTIFICATE_BASE64" | base64 --decode > certificate.p12
+
           security create-keychain -p "build" build.keychain
           security default-keychain -s build.keychain
           security unlock-keychain -p "build" build.keychain
           security import certificate.p12 -k build.keychain -P "$MACOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+
+          # Make sure codesign can use this keychain without prompts
           security set-key-partition-list -S apple-tool:,apple: -s -k "build" build.keychain
+          security list-keychains -s build.keychain
+
+          # Show available identities for verification
           security find-identity -v -p codesigning build.keychain
         env:
           MACOS_CERTIFICATE_BASE64: ${{ secrets.MACOS_CERTIFICATE_BASE64 }}
@@ -48,18 +54,31 @@ jobs:
           echo "App bundle contents:"
           find build/Graphverb_artefacts/Release/Standalone/Graphverb.app
 
+          echo "Extracting Developer ID from keychain..."
+          CERT_NAME=$(security find-identity -v -p codesigning build.keychain | grep "ScribeNow LLC" | sed -E 's/.*"(.+)"$/\1/' | head -n 1)
+
+          if [ -z "$CERT_NAME" ]; then
+            echo "Failed to find Developer ID certificate in keychain"
+            exit 1
+          fi
+
+          echo "Using certificate: $CERT_NAME"
+
           echo "Signing main binary..."
           codesign --force --verbose --options runtime \
-            --timestamp --sign "Developer ID Application: ScribeNow LLC (NY)" \
-            build/Graphverb_artefacts/Release/Standalone/Graphverb.app/Contents/MacOS/Graphverb 2>&1
+            --timestamp=none --sign "$CERT_NAME" \
+            build/Graphverb_artefacts/Release/Standalone/Graphverb.app/Contents/MacOS/Graphverb
 
           echo "Signing full app bundle..."
-          codesign --deep --force --verbose --options runtime \
-            --timestamp --sign "Developer ID Application: ScribeNow LLC (NY)" \
-            build/Graphverb_artefacts/Release/Standalone/Graphverb.app 2>&1
+          codesign --force --verbose --options runtime \
+            --timestamp=none --sign "$CERT_NAME" \
+            build/Graphverb_artefacts/Release/Standalone/Graphverb.app
 
           echo "Verifying code signature..."
           codesign --verify --deep --verbose=4 build/Graphverb_artefacts/Release/Standalone/Graphverb.app || exit 1
+
+          echo "Gatekeeper check..."
+          spctl --assess --type exec --verbose build/Graphverb_artefacts/Release/Standalone/Graphverb.app || exit 1
 
           echo "Copying signed app..."
           cp -R build/Graphverb_artefacts/Release/Standalone/Graphverb.app dist/macos/
@@ -86,112 +105,112 @@ jobs:
         run: |
           security delete-keychain build.keychain
 
-  build-windows:
-    runs-on: windows-latest
+#  build-windows:
+#    runs-on: windows-latest
+#
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@v4
+#
+#      - name: Install Ninja
+#        run: choco install ninja
+#
+#      - name: Decode Certificate (.pfx)
+#        shell: pwsh
+#        run: |
+#          [System.IO.File]::WriteAllBytes("certificate.pfx", [Convert]::FromBase64String("${{ secrets.MACOS_CERTIFICATE_BASE64 }}"))
+#
+#      - name: Set up MSVC Developer Command Prompt
+#        uses: ilammy/msvc-dev-cmd@v1
+#
+#      - name: Configure with MSVC
+#        run: cmake -DCMAKE_BUILD_TYPE=Release -G "Ninja" -B build -S .
+#
+#      - name: Build
+#        run: cmake --build build --target Graphverb_All -j 6
+#
+#      - name: Sign binaries
+#        shell: pwsh
+#        env:
+#          CERT_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+#        run: |
+#          $ErrorActionPreference = "Stop"
+#
+#          # Decode cert again to be safe
+#          [System.IO.File]::WriteAllBytes("certificate.pfx", [Convert]::FromBase64String("${{ secrets.MACOS_CERTIFICATE_BASE64 }}"))
+#
+#          # Find signtool
+#          $signtool = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" `
+#            -latest -products * -requires Microsoft.Component.MSBuild `
+#            -find "**\signtool.exe"
+#
+#          if (-not $signtool) {
+#            Write-Error "signtool.exe not found"
+#            exit 1
+#          }
+#
+#          Write-Host "Using signtool at $signtool"
+#
+#          $files = Get-ChildItem -Recurse -Path build\Graphverb_artefacts\Release -Include *.exe, *.dll
+#          foreach ($file in $files) {
+#            Write-Host "Signing $($file.FullName)..."
+#            & $signtool sign /nologo /debug /f certificate.pfx /p $env:CERT_PASSWORD `
+#              /tr http://timestamp.digicert.com /td sha256 /fd sha256 "$($file.FullName)" 2>&1 | Tee-Object -Variable signLog
+#
+#            if ($LASTEXITCODE -ne 0) {
+#              Write-Error "Signing failed for $($file.FullName)"
+#              $signLog
+#              exit 1
+#            }
+#          }
+#
+#      - name: Package
+#        run: |
+#          mkdir dist
+#          powershell Compress-Archive -Path build\Graphverb_artefacts\Release\* -DestinationPath dist\Graphverb-windows.zip
+#
+#      - name: Upload Artifacts
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: Graphverb-Windows
+#          path: dist\Graphverb-windows.zip
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install Ninja
-        run: choco install ninja
-
-      - name: Decode Certificate (.pfx)
-        shell: pwsh
-        run: |
-          [System.IO.File]::WriteAllBytes("certificate.pfx", [Convert]::FromBase64String("${{ secrets.MACOS_CERTIFICATE_BASE64 }}"))
-
-      - name: Set up MSVC Developer Command Prompt
-        uses: ilammy/msvc-dev-cmd@v1
-
-      - name: Configure with MSVC
-        run: cmake -DCMAKE_BUILD_TYPE=Release -G "Ninja" -B build -S .
-
-      - name: Build
-        run: cmake --build build --target Graphverb_All -j 6
-
-      - name: Sign binaries
-        shell: pwsh
-        env:
-          CERT_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
-        run: |
-          $ErrorActionPreference = "Stop"
-
-          # Decode cert again to be safe
-          [System.IO.File]::WriteAllBytes("certificate.pfx", [Convert]::FromBase64String("${{ secrets.MACOS_CERTIFICATE_BASE64 }}"))
-
-          # Find signtool
-          $signtool = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" `
-            -latest -products * -requires Microsoft.Component.MSBuild `
-            -find "**\signtool.exe"
-
-          if (-not $signtool) {
-            Write-Error "signtool.exe not found"
-            exit 1
-          }
-
-          Write-Host "Using signtool at $signtool"
-
-          $files = Get-ChildItem -Recurse -Path build\Graphverb_artefacts\Release -Include *.exe, *.dll
-          foreach ($file in $files) {
-            Write-Host "Signing $($file.FullName)..."
-            & $signtool sign /nologo /debug /f certificate.pfx /p $env:CERT_PASSWORD `
-              /tr http://timestamp.digicert.com /td sha256 /fd sha256 "$($file.FullName)" 2>&1 | Tee-Object -Variable signLog
-
-            if ($LASTEXITCODE -ne 0) {
-              Write-Error "Signing failed for $($file.FullName)"
-              $signLog
-              exit 1
-            }
-          }
-
-      - name: Package
-        run: |
-          mkdir dist
-          powershell Compress-Archive -Path build\Graphverb_artefacts\Release\* -DestinationPath dist\Graphverb-windows.zip
-
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: Graphverb-Windows
-          path: dist\Graphverb-windows.zip
-
-  build-linux:
-    runs-on: ubuntu-22.04
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install Dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y \
-            cmake ninja-build build-essential \
-            libasound2-dev libjack-jackd2-dev \
-            libx11-dev libfreetype6-dev libfontconfig1-dev \
-            libgl1-mesa-dev libcurl4-openssl-dev \
-            libxrandr-dev libxinerama-dev libxcursor-dev \
-            libxcomposite-dev libxext-dev \
-            libgtk2.0-dev
-
-      - name: Configure
-        run: |
-          cmake -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
-                -DCMAKE_EXE_LINKER_FLAGS="-lcurl" \
-                -G Ninja -B build -S .
-
-      - name: Build
-        run: cmake --build build --target Graphverb_All -j 6
-
-      - name: Package
-        run: |
-          mkdir -p dist/linux
-          cp -R build/Graphverb_artefacts/Release/* dist/linux/
-          cd dist && zip -r Graphverb-linux.zip linux
-
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: Graphverb-Linux
-          path: dist/Graphverb-linux.zip
+#  build-linux:
+#    runs-on: ubuntu-22.04
+#
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@v4
+#
+#      - name: Install Dependencies
+#        run: |
+#          sudo apt update
+#          sudo apt install -y \
+#            cmake ninja-build build-essential \
+#            libasound2-dev libjack-jackd2-dev \
+#            libx11-dev libfreetype6-dev libfontconfig1-dev \
+#            libgl1-mesa-dev libcurl4-openssl-dev \
+#            libxrandr-dev libxinerama-dev libxcursor-dev \
+#            libxcomposite-dev libxext-dev \
+#            libgtk2.0-dev
+#
+#      - name: Configure
+#        run: |
+#          cmake -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+#                -DCMAKE_EXE_LINKER_FLAGS="-lcurl" \
+#                -G Ninja -B build -S .
+#
+#      - name: Build
+#        run: cmake --build build --target Graphverb_All -j 6
+#
+#      - name: Package
+#        run: |
+#          mkdir -p dist/linux
+#          cp -R build/Graphverb_artefacts/Release/* dist/linux/
+#          cd dist && zip -r Graphverb-linux.zip linux
+#
+#      - name: Upload Artifacts
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: Graphverb-Linux
+#          path: dist/Graphverb-linux.zip
