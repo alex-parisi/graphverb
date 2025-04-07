@@ -44,20 +44,11 @@ jobs:
       - name: Build
         run: cmake --build build --target Graphverb_All -j 6
 
-      - name: Check keychain
-        run: security dump-keychain build.keychain
-
       - name: Package and Sign
         run: |
           set -e
 
           mkdir -p dist/macos
-
-          echo "Verifying Graphverb.app exists..."
-          ls -l build/Graphverb_artefacts/Release/Standalone/Graphverb.app || exit 1
-
-          echo "App bundle contents:"
-          find build/Graphverb_artefacts/Release/Standalone/Graphverb.app
 
           echo "Extracting certificate name..."
           CERT_NAME=$(security find-identity -v -p codesigning build.keychain | grep "ScribeNow LLC" | sed -E 's/.*"(.+)"$/\1/' | head -n 1)
@@ -71,12 +62,12 @@ jobs:
 
           echo "Signing main binary..."
           codesign --force --verbose --sign "$CERT_NAME" \
-            --options runtime --timestamp=none \
+            --options runtime --timestamp \
             build/Graphverb_artefacts/Release/Standalone/Graphverb.app/Contents/MacOS/Graphverb
 
           echo "Signing full .app bundle..."
           codesign --force --deep --verbose --sign "$CERT_NAME" \
-            --options runtime --timestamp=none \
+            --options runtime --timestamp \
             build/Graphverb_artefacts/Release/Standalone/Graphverb.app
 
           echo "Verifying signature with codesign..."
