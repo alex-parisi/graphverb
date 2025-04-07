@@ -36,7 +36,7 @@ public:
      * @param g The graphics context to use for painting.
      */
     void paint(juce::Graphics &g) override {
-        g.fillAll(juce::Colours::black);
+        g.fillAll(juce::Colours::transparentBlack);
         const auto bounds = getLocalBounds().toFloat();
         const auto center = bounds.getCentre();
         const float maxSize =
