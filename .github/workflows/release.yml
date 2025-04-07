@@ -44,29 +44,24 @@ jobs:
 
           echo "Verifying Graphverb.app exists..."
           ls -l build/Graphverb_artefacts/Release/Standalone/Graphverb.app || exit 1
-          
-          codesign --display --verbose=4 build/Graphverb_artefacts/Release/Standalone/Graphverb.app
 
-          echo "Signing standalone app..."
+          echo "App bundle contents:"
+          find build/Graphverb_artefacts/Release/Standalone/Graphverb.app
+
+          echo "Signing standalone binary inside app..."
+          codesign --force --verbose --options runtime \
+            --timestamp=http://timestamp.apple.com \
+            --sign "Developer ID Application: ScribeNow LLC (NY)" \
+            build/Graphverb_artefacts/Release/Standalone/Graphverb.app/Contents/MacOS/Graphverb
+
+          echo "Signing app bundle..."
           codesign --deep --force --verbose --options runtime \
             --timestamp=http://timestamp.apple.com \
             --sign "Developer ID Application: ScribeNow LLC (NY)" \
             build/Graphverb_artefacts/Release/Standalone/Graphverb.app
 
-          echo "Signing VST3..."
-          codesign --deep --force --verbose --options runtime \
-            --sign "Developer ID Application: ScribeNow LLC (NY)" \
-            ~/Library/Audio/Plug-Ins/VST3/Graphverb.vst3 || echo "VST3 signing skipped or failed"
-
-          echo "Signing AU..."
-          codesign --deep --force --verbose --options runtime \
-            --sign "Developer ID Application: ScribeNow LLC (NY)" \
-            ~/Library/Audio/Plug-Ins/Components/Graphverb.component || echo "AU signing skipped or failed"
-
           echo "Copying signed files..."
-          cp -R ~/Library/Audio/Plug-Ins/VST3/Graphverb.vst3 dist/macos/ || true
-          cp -R ~/Library/Audio/Plug-Ins/Components/Graphverb.component dist/macos/ || true
-          cp -R build/Graphverb_artefacts/Release/Standalone/Graphverb.app dist/macos/ || true
+          cp -R build/Graphverb_artefacts/Release/Standalone/Graphverb.app dist/macos/
 
           cd dist && zip -r Graphverb-macos.zip macos
 
@@ -119,37 +114,54 @@ jobs:
 
       - name: Sign binaries
         shell: pwsh
+        env:
+          CERT_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
         run: |
-          $certPassword = "${{ secrets.MACOS_CERTIFICATE_PASSWORD }}"
+          $ErrorActionPreference = "Stop"
 
-          $signtool = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" `
-            -latest -products * -requires Microsoft.Component.MSBuild `
-            -find "**\signtool.exe"
+          # Decode the cert
+          [System.IO.File]::WriteAllBytes("certificate.pfx", [Convert]::FromBase64String("${{ secrets.MACOS_CERTIFICATE_BASE64 }}"))
 
-          if (-not $signtool) {
-              Write-Error "signtool.exe not found"
-              exit 1
+          # Find signtool.exe
+          $signtoolPath = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" `
+            -latest -products * -requires Microsoft.Component.MSBuild -find "**\signtool.exe"
+
+          if (-not $signtoolPath) {
+            Write-Error "signtool.exe not found"
+            exit 1
           }
 
+          Write-Host "Found signtool at: $signtoolPath"
+
           $filesToSign = Get-ChildItem -Recurse -Path build\Graphverb_artefacts\Release\ -Include *.exe, *.dll
-          
+
           foreach ($file in $filesToSign) {
-              Write-Host "Signing $($file.FullName)..."
-              $process = Start-Process -FilePath $signtool -ArgumentList @(
-                  "sign",
-                  "/nologo",
-                  "/f", "certificate.pfx",
-                  "/p", "$certPassword",
-                  "/tr", "http://timestamp.digicert.com",
-                  "/td", "sha256",
-                  "/fd", "sha256",
-                  "$($file.FullName)"
-              ) -Wait -PassThru -NoNewWindow
-          
-              if ($process.ExitCode -ne 0) {
-                  Write-Error "Failed to sign $($file.FullName)"
-                  exit $process.ExitCode
-              }
+            Write-Host "Signing $($file.FullName)..."
+
+            $arguments = @(
+              "sign",
+              "/nologo",
+              "/debug",
+              "/f", "certificate.pfx",
+              "/p", "$env:CERT_PASSWORD",
+              "/tr", "http://timestamp.digicert.com",
+              "/td", "sha256",
+              "/fd", "sha256",
+              "$($file.FullName)"
+            )
+
+            $process = Start-Process -FilePath $signtoolPath `
+                                     -ArgumentList $arguments `
+                                     -Wait `
+                                     -PassThru `
+                                     -NoNewWindow:$false
+
+            if ($process.ExitCode -ne 0) {
+              Write-Error "Signing failed for $($file.FullName) with exit code $($process.ExitCode)"
+              exit $process.ExitCode
+            } else {
+              Write-Host "Signed $($file.Name) successfully."
+            }
           }
 
       - name: Package
