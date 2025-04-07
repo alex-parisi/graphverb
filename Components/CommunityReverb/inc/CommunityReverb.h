@@ -34,16 +34,17 @@ struct CommunityReverb {
      *
      * @param avgEnergy Average magnitude (energy) for the community.
      * @param inverted If true, the parameters are inverted.
+     * @param intensity Intensity of the reverb effect.
      */
-    void updateParameters(const float avgEnergy, const bool inverted) {
+    void updateParameters(const float avgEnergy, const bool inverted,
+                          const float intensity) {
         /// TODO - new plugin with N bandpass filters that get their own reverbs
         if (inverted) {
             params.roomSize = juce::jlimit(0.0f, 1.0f, 1.0f - avgEnergy);
         } else {
             params.roomSize = juce::jlimit(0.0f, 1.0f, avgEnergy);
         }
-        /// TODO - map this to a knob?
-        params.wetLevel = juce::jlimit(0.0f, 1.0f, 0.8f);
+        params.wetLevel = juce::jlimit(0.0f, 1.0f, intensity);
         reverb.setParameters(params);
     }
 

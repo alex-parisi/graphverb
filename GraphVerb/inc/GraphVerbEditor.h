@@ -44,6 +44,7 @@ private:
     /** Knob components for various parameters */
     KnobComponent livelinessKnob;
     KnobComponent gainKnob;
+    KnobComponent intensityKnob;
 
     /** Button components for interactivity */
     ButtonComponent bypassButton;

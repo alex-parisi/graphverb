@@ -10,20 +10,22 @@ GraphVerbEditor::GraphVerbEditor(GraphVerb &p) :
     clusterEnergy(p), clusterVisualizer(p),
     livelinessKnob(p.getParameters(), "liveliness", "Liveliness"),
     gainKnob(p.getParameters(), "gain", "Gain"),
+    intensityKnob(p.getParameters(), "intensity", "Intensity"),
     bypassButton(p.getParameters(), "bypass", "Bypass"),
     invertButton(p.getParameters(), "invert", "Invert") {
 
     addAndMakeVisible(livelinessKnob);
     addAndMakeVisible(gainKnob);
+    addAndMakeVisible(intensityKnob);
     addAndMakeVisible(scope);
     addAndMakeVisible(clusterEnergy);
     addAndMakeVisible(clusterVisualizer);
     addAndMakeVisible(bypassButton);
     addAndMakeVisible(invertButton);
 
-    setSize(300, 400);
+    setSize(450, 200);
     setResizable(true, true);
-    setResizeLimits(300, 400, 1000, 600);
+    setResizeLimits(450, 200, 600, 400);
     startTimerHz(60);
 }
 
@@ -44,6 +46,8 @@ void GraphVerbEditor::resized() {
 
     juce::Rectangle<int> controlArea = area.removeFromBottom(100);
     livelinessKnob.setBounds(
+            controlArea.removeFromLeft(controlArea.getWidth() / 5));
+    intensityKnob.setBounds(
             controlArea.removeFromLeft(controlArea.getWidth() / 4));
     gainKnob.setBounds(controlArea.removeFromLeft(controlArea.getWidth() / 3));
     bypassButton.setBounds(
@@ -51,16 +55,13 @@ void GraphVerbEditor::resized() {
     invertButton.setBounds(
             controlArea.removeFromLeft(controlArea.getWidth() / 1));
 
-    const juce::Rectangle<int> scopeArea =
-            area.removeFromBottom(area.getHeight() / 3);
-    scope.setBounds(scopeArea.reduced(10));
-
-    const juce::Rectangle<int> clusterArea =
-            area.removeFromBottom(area.getHeight() / 2);
-    clusterEnergy.setBounds(clusterArea.reduced(10));
-
-    const juce::Rectangle<int> nodeArea = area;
-    clusterVisualizer.setBounds(nodeArea.reduced(10));
+    juce::Rectangle<int> clusterArea = area;
+    const juce::Rectangle<int> clusterVisualizerArea =
+            clusterArea.removeFromRight(static_cast<int>(
+                    static_cast<float>(clusterArea.getWidth()) * 0.75f));
+    scope.setBounds(clusterVisualizerArea.reduced(10));
+    clusterEnergy.setBounds(clusterVisualizerArea.reduced(10));
+    clusterVisualizer.setBounds(clusterArea.reduced(10));
 }
 
 /**
