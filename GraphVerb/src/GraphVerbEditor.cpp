@@ -7,14 +7,17 @@
  */
 GraphVerbEditor::GraphVerbEditor(GraphVerb &p) :
     AudioProcessorEditor(p), processor(p), scope(p.getAudioBufferQueue()),
-    clusterEnergy(p), clusterVisualizer(p), dryLevelKnob(p.getParameters(), "dryLevel", "Dry Level"),
-    gainKnob(p.getParameters(), "gain", "Gain") {
+    clusterEnergy(p), clusterVisualizer(p),
+    dryLevelKnob(p.getParameters(), "dryLevel", "Dry Level"),
+    gainKnob(p.getParameters(), "gain", "Gain"),
+    bypassButton(p.getParameters(), "bypass", "Bypass") {
 
     addAndMakeVisible(dryLevelKnob);
     addAndMakeVisible(gainKnob);
     addAndMakeVisible(scope);
     addAndMakeVisible(clusterEnergy);
     addAndMakeVisible(clusterVisualizer);
+    addAndMakeVisible(bypassButton);
 
     setSize(300, 400);
     setResizable(true, true);
@@ -39,8 +42,10 @@ void GraphVerbEditor::resized() {
 
     juce::Rectangle<int> controlArea = area.removeFromBottom(100);
     dryLevelKnob.setBounds(
-            controlArea.removeFromLeft(controlArea.getWidth() / 2).reduced(10));
+            controlArea.removeFromLeft(controlArea.getWidth() / 3).reduced(10));
     gainKnob.setBounds(
+            controlArea.removeFromLeft(controlArea.getWidth() / 2).reduced(10));
+    bypassButton.setBounds(
             controlArea.removeFromLeft(controlArea.getWidth()).reduced(10));
 
     const juce::Rectangle<int> scopeArea =

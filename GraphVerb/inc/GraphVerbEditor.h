@@ -3,10 +3,11 @@
 
 #include <juce_audio_basics/juce_audio_basics.h>
 #include "ClusterEnergy.h"
+#include "ClusterVisualizer.h"
 #include "GraphVerb.h"
 #include "KnobComponent.h"
+#include "ButtonComponent.h"
 #include "ScopeComponent.h"
-#include "ClusterVisualizer.h"
 
 /**
  * @brief Editor class for the GraphVerb processor.
@@ -44,12 +45,16 @@ private:
     KnobComponent dryLevelKnob;
     KnobComponent gainKnob;
 
+    /** Button component for bypassing the effect */
+    ButtonComponent bypassButton;
+
     /** Waveform display for visualizing audio data */
     ScopeComponent<float> scope;
 
     /** Cluster energy view for visualizing cluster energies */
     ClusterEnergyView clusterEnergy;
 
+    /** Cluster visualizer for displaying the graph structure */
     ClusterVisualizer clusterVisualizer;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GraphVerbEditor)

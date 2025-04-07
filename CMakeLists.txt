@@ -37,6 +37,7 @@ target_sources(GraphVerb PRIVATE
         Components/SpectralAnalyzer/src/SpectralAnalyzer.cpp
         Components/SpectralGraph/src/SpectralGraph.cpp
         Components/UI/Knob/src/KnobComponent.cpp
+        Components/UI/Button/src/ButtonComponent.cpp
         GraphVerb/src/GraphVerb.cpp
         GraphVerb/src/GraphVerbEditor.cpp
 )
@@ -48,6 +49,7 @@ target_include_directories(GraphVerb PRIVATE
         Components/CommunityClustering/inc
         Components/CommunityReverb/inc
         Components/UI/Knob/inc
+        Components/UI/Button/inc
         Components/UI/Scope/inc
         Components/UI/ClusterEnergy/inc
         Components/UI/ClusterVisualizer/inc
