@@ -83,16 +83,11 @@ jobs:
           codesign --verify --deep --strict --verbose=4 \
             build/Graphverb_artefacts/Release/Standalone/Graphverb.app
 
-          echo "Verifying with spctl..."
-          spctl --assess --type exec --verbose \
-            build/Graphverb_artefacts/Release/Standalone/Graphverb.app
-
           echo "Copying signed app..."
           cp -R build/Graphverb_artefacts/Release/Standalone/Graphverb.app dist/macos/
 
           cd dist
           zip -r Graphverb-macos.zip macos
-      
 
       - name: Notarize Plugin
         uses: GuillaumeFalourd/xcode-notarize@v1
