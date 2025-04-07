@@ -27,12 +27,8 @@ jobs:
           security default-keychain -s build.keychain
           security unlock-keychain -p "build" build.keychain
           security import certificate.p12 -k build.keychain -P "$MACOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
-
-          # Make sure codesign can use this keychain without prompts
           security set-key-partition-list -S apple-tool:,apple: -s -k "build" build.keychain
           security list-keychains -s build.keychain
-
-          # Show available identities for verification
           security find-identity -v -p codesigning build.keychain
         env:
           MACOS_CERTIFICATE_BASE64: ${{ secrets.MACOS_CERTIFICATE_BASE64 }}
@@ -44,20 +40,12 @@ jobs:
       - name: Build
         run: cmake --build build --target Graphverb_All -j 6
 
-      - name: Package and Sign
+      - name: Sign Application
         run: |
           set -e
-
-          mkdir -p dist/macos
-
-          echo "Extracting certificate name..."
           CERT_NAME=$(security find-identity -v -p codesigning build.keychain | grep "ScribeNow LLC" | sed -E 's/.*"(.+)"$/\1/' | head -n 1)
           echo "Using cert: $CERT_NAME"
-
-          echo "Unlocking keychain again just in case..."
           security unlock-keychain -p "build" build.keychain
-
-          echo "Setting key partition list again..."
           security set-key-partition-list -S apple-tool:,apple: -s -k "build" build.keychain
 
           echo "Signing main binary..."
@@ -65,37 +53,36 @@ jobs:
             --options runtime --timestamp \
             build/Graphverb_artefacts/Release/Standalone/Graphverb.app/Contents/MacOS/Graphverb
 
-          echo "Signing full .app bundle..."
+          echo "Signing full app bundle..."
           codesign --force --deep --verbose --sign "$CERT_NAME" \
             --options runtime --timestamp \
             build/Graphverb_artefacts/Release/Standalone/Graphverb.app
 
-          echo "Verifying signature with codesign..."
-          codesign --verify --deep --strict --verbose=4 \
-            build/Graphverb_artefacts/Release/Standalone/Graphverb.app
+          echo "Verifying signature..."
+          codesign --verify --deep --strict --verbose=4 build/Graphverb_artefacts/Release/Standalone/Graphverb.app
 
-          echo "Copying signed app..."
-          cp -R build/Graphverb_artefacts/Release/Standalone/Graphverb.app dist/macos/
-
-          cd dist
-          zip -r Graphverb-macos.zip macos
-
-      - name: Notarize Plugin
+      - name: Notarize App
         run: |
-          xcrun notarytool submit dist/Graphverb-macos.zip \
+          xcrun notarytool submit build/Graphverb_artefacts/Release/Standalone/Graphverb.app \
             --apple-id "${{ secrets.APPLE_DEVELOPER_ID }}" \
             --team-id "${{ secrets.APPLE_TEAM_ID }}" \
             --password "${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}" \
             --wait --output-format json > notarization_result.json
-          
+
           echo "Notarization result:"
           cat notarization_result.json
 
       - name: Staple Notarization Ticket
         run: |
-          xcrun stapler staple dist/Graphverb-macos.zip
+          xcrun stapler staple build/Graphverb_artefacts/Release/Standalone/Graphverb.app
 
-      - name: Verify Signing
+      - name: Package
+        run: |
+          mkdir -p dist/macos
+          cp -R build/Graphverb_artefacts/Release/Standalone/Graphverb.app dist/macos/
+          cd dist && zip -r Graphverb-macos.zip macos
+
+      - name: Verify Gatekeeper
         run: |
           spctl --assess --type exec --verbose=4 dist/macos/Graphverb.app
 
