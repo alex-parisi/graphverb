@@ -36,8 +36,11 @@ juce_add_plugin(GraphVerb
 target_sources(GraphVerb PRIVATE
         Components/SpectralAnalyzer/src/SpectralAnalyzer.cpp
         Components/SpectralGraph/src/SpectralGraph.cpp
+        Components/CommunityClustering/src/CommunityClustering.cpp
         Components/UI/Knob/src/KnobComponent.cpp
         Components/UI/Button/src/ButtonComponent.cpp
+        Components/UI/ClusterVisualizer/src/ClusterVisualizer.cpp
+        Components/UI/ClusterEnergy/src/ClusterEnergy.cpp
         GraphVerb/src/GraphVerb.cpp
         GraphVerb/src/GraphVerbEditor.cpp
 )
