@@ -51,13 +51,12 @@ jobs:
           cd dist && zip -r Graphverb-macos.zip macos
 
       - name: Notarize Plugin
-        uses: devbotsxyz/xcode-notarize@v1
+        uses: GuillaumeFalourd/xcode-notarize@v1
         with:
           product-path: dist/Graphverb-macos.zip
           primary-bundle-id: com.scribenow.graphverb
           appstore-connect-username: ${{ secrets.APPLE_DEVELOPER_ID }}
           appstore-connect-password: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-          team-id: ${{ secrets.APPLE_TEAM_ID }}
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -75,8 +74,12 @@ jobs:
       - name: Install Dependencies
         run: choco install ninja
 
-      - name: Configure (with MSVC)
-        run: cmake -DCMAKE_BUILD_TYPE=Release -G "Ninja" -B build -S .
+      - name: Configure (MSVC)
+        run: |
+          cmake -DCMAKE_BUILD_TYPE=Release -G "Ninja" -B build -S .
+        env:
+          CC: cl
+          CXX: cl
 
       - name: Build
         run: cmake --build build --target Graphverb_All -j 6
@@ -108,7 +111,8 @@ jobs:
           libx11-dev libfreetype6-dev libfontconfig1-dev \
           libgl1-mesa-dev libcurl4-openssl-dev \
           libxrandr-dev libxinerama-dev libxcursor-dev \
-          libxcomposite-dev libxext-dev
+          libxcomposite-dev libxext-dev \
+          libgtk-3-dev
 
       - name: Configure
         run: cmake -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -G Ninja -B build -S .
