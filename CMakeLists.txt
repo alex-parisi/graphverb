@@ -28,6 +28,10 @@ else()
     set(GRAPHVERB_FORMATS VST3 Standalone)
 endif()
 
+if(UNIX AND NOT APPLE)
+    add_definitions(-DJUCE_WEB_BROWSER=0)
+endif()
+
 juce_add_plugin(Graphverb
         COMPANY_NAME "Scribe Now LLC"
         PRODUCT_NAME "Graphverb"
