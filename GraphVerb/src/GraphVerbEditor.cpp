@@ -12,7 +12,7 @@ GraphVerbEditor::GraphVerbEditor(GraphVerb &p) :
     gainKnob(p.getParameters(), "gain", "Gain"),
     intensityKnob(p.getParameters(), "intensity", "Intensity"),
     bypassButton(p.getParameters(), "bypass", "Bypass"),
-    invertButton(p.getParameters(), "invert", "Shrink") {
+    expandButton(p.getParameters(), "expand", "Expand") {
 
     addAndMakeVisible(livelinessKnob);
     addAndMakeVisible(gainKnob);
@@ -21,7 +21,7 @@ GraphVerbEditor::GraphVerbEditor(GraphVerb &p) :
     addAndMakeVisible(clusterEnergy);
     addAndMakeVisible(clusterVisualizer);
     addAndMakeVisible(bypassButton);
-    addAndMakeVisible(invertButton);
+    addAndMakeVisible(expandButton);
 
     setSize(450, 200);
     setResizable(true, true);
@@ -50,7 +50,7 @@ void GraphVerbEditor::resized() {
     intensityKnob.setBounds(
             controlArea.removeFromLeft(controlArea.getWidth() / 4));
     gainKnob.setBounds(controlArea.removeFromLeft(controlArea.getWidth() / 3));
-    invertButton.setBounds(
+    expandButton.setBounds(
             controlArea.removeFromLeft(controlArea.getWidth() / 2));
     bypassButton.setBounds(
             controlArea.removeFromLeft(controlArea.getWidth() / 1));

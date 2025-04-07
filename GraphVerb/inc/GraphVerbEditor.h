@@ -48,7 +48,7 @@ private:
 
     /** Button components for interactivity */
     ButtonComponent bypassButton;
-    ButtonComponent invertButton;
+    ButtonComponent expandButton;
 
     /** Waveform display for visualizing audio data */
     ScopeComponent<float> scope;

@@ -98,7 +98,7 @@ void GraphVerb::processBlock(juce::AudioBuffer<float> &buffer,
     }
     const float intensity = *parameters.getRawParameterValue("intensity");
     for (int i = 0; i < numClusters; ++i) {
-        if (*parameters.getRawParameterValue("invert") < 0.5f) {
+        if (*parameters.getRawParameterValue("expand") < 0.5f) {
             communityReverbs[i]->updateParameters(clusterEnergies[i], false,
                                                   intensity);
         } else {
@@ -169,7 +169,7 @@ GraphVerb::createParameterLayout() {
     /// Add the parameters
     layout.add(std::make_unique<juce::AudioParameterBool>("bypass", "Bypass",
                                                           false));
-    layout.add(std::make_unique<juce::AudioParameterBool>("invert", "Invert",
+    layout.add(std::make_unique<juce::AudioParameterBool>("expand", "Expand",
                                                           false));
     layout.add(std::make_unique<juce::AudioParameterFloat>(
             "liveliness", "Liveliness", 0.0f, 1.0f, 0.5f));
