@@ -40,30 +40,30 @@ jobs:
       - name: Build
         run: cmake --build build --target Graphverb_All -j 6
 
-      - name: Sign Application
+      - name: Sign and Prepare App
         run: |
           set -e
+          mkdir -p dist/macos
+          APP_PATH="build/Graphverb_artefacts/Release/Standalone/Graphverb.app"
+
           CERT_NAME=$(security find-identity -v -p codesigning build.keychain | grep "ScribeNow LLC" | sed -E 's/.*"(.+)"$/\1/' | head -n 1)
           echo "Using cert: $CERT_NAME"
-          security unlock-keychain -p "build" build.keychain
-          security set-key-partition-list -S apple-tool:,apple: -s -k "build" build.keychain
 
-          echo "Signing main binary..."
-          codesign --force --verbose --sign "$CERT_NAME" \
-            --options runtime --timestamp \
-            build/Graphverb_artefacts/Release/Standalone/Graphverb.app/Contents/MacOS/Graphverb
+          echo "Signing binary..."
+          codesign --force --verbose --sign "$CERT_NAME" --options runtime --timestamp "$APP_PATH/Contents/MacOS/Graphverb"
 
-          echo "Signing full app bundle..."
-          codesign --force --deep --verbose --sign "$CERT_NAME" \
-            --options runtime --timestamp \
-            build/Graphverb_artefacts/Release/Standalone/Graphverb.app
+          echo "Signing bundle..."
+          codesign --force --deep --verbose --sign "$CERT_NAME" --options runtime --timestamp "$APP_PATH"
 
-          echo "Verifying signature..."
-          codesign --verify --deep --strict --verbose=4 build/Graphverb_artefacts/Release/Standalone/Graphverb.app
+          echo "Verifying..."
+          codesign --verify --deep --strict --verbose=4 "$APP_PATH"
+
+          echo "Zipping app for notarization..."
+          ditto -c -k --keepParent "$APP_PATH" dist/Graphverb-for-notarization.zip
 
       - name: Notarize App
         run: |
-          xcrun notarytool submit build/Graphverb_artefacts/Release/Standalone/Graphverb.app \
+          xcrun notarytool submit dist/Graphverb-for-notarization.zip \
             --apple-id "${{ secrets.APPLE_DEVELOPER_ID }}" \
             --team-id "${{ secrets.APPLE_TEAM_ID }}" \
             --password "${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}" \
@@ -72,13 +72,12 @@ jobs:
           echo "Notarization result:"
           cat notarization_result.json
 
-      - name: Staple Notarization Ticket
+      - name: Staple Ticket
         run: |
           xcrun stapler staple build/Graphverb_artefacts/Release/Standalone/Graphverb.app
 
-      - name: Package
+      - name: Final Packaging
         run: |
-          mkdir -p dist/macos
           cp -R build/Graphverb_artefacts/Release/Standalone/Graphverb.app dist/macos/
           cd dist && zip -r Graphverb-macos.zip macos
 
