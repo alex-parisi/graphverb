@@ -42,18 +42,22 @@ jobs:
         run: |
           mkdir -p dist/macos
 
+          echo "Verifying Graphverb.app exists..."
+          ls -l build/Graphverb_artefacts/Release/Standalone/Graphverb.app || exit 1
+
           echo "Signing standalone app..."
-          codesign --deep --force --verbose --options runtime --timestamp \
+          timeout 60s codesign --deep --force --verbose --options runtime \
+            --timestamp=http://timestamp.apple.com \
             --sign "Developer ID Application: ScribeNow LLC (NY)" \
             build/Graphverb_artefacts/Release/Standalone/Graphverb.app
 
           echo "Signing VST3..."
-          codesign --force --verbose --options runtime --timestamp \
+          timeout 60s codesign --force --verbose --options runtime --timestamp=http://timestamp.apple.com \
             --sign "Developer ID Application: ScribeNow LLC (NY)" \
             ~/Library/Audio/Plug-Ins/VST3/Graphverb.vst3 || echo "VST3 signing skipped or failed"
 
           echo "Signing AU..."
-          codesign --force --verbose --options runtime --timestamp \
+          timeout 60s codesign --force --verbose --options runtime --timestamp=http://timestamp.apple.com \
             --sign "Developer ID Application: ScribeNow LLC (NY)" \
             ~/Library/Audio/Plug-Ins/Components/Graphverb.component || echo "AU signing skipped or failed"
 
@@ -63,7 +67,7 @@ jobs:
           cp -R build/Graphverb_artefacts/Release/Standalone/Graphverb.app dist/macos/ || true
 
           cd dist && zip -r Graphverb-macos.zip macos
-          
+
           echo "Contents of ZIP:"
           unzip -l Graphverb-macos.zip
 
@@ -85,7 +89,7 @@ jobs:
       - name: Cleanup Keychain
         if: always()
         run: |
-          security delete-keychain build.keychain  
+          security delete-keychain build.keychain
 
   build-windows:
     runs-on: windows-latest
@@ -112,11 +116,25 @@ jobs:
         run: cmake --build build --target Graphverb_All -j 6
 
       - name: Sign binaries
+        shell: pwsh
+        env:
+          CERT_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
         run: |
-          $certPassword = "${{ secrets.MACOS_CERTIFICATE_PASSWORD }}"
+          $signtool = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" `
+            -latest -products * -requires Microsoft.Component.MSBuild `
+            -find "**\signtool.exe"
+
+          if (-not $signtool) {
+              Write-Error "signtool.exe not found"
+              exit 1
+          }
+
           $filesToSign = Get-ChildItem -Recurse -Path build\Graphverb_artefacts\Release\ -Include *.exe, *.dll
           foreach ($file in $filesToSign) {
-            & "C:\Program Files (x86)\Windows Kits\10\bin\x64\signtool.exe" sign /f certificate.pfx /p $certPassword /tr http://timestamp.digicert.com /td sha256 /fd sha256 "$($file.FullName)"
+            Write-Host "Signing $($file.FullName)..."
+            & $signtool sign /f certificate.pfx /p $env:CERT_PASSWORD `
+              /tr http://timestamp.digicert.com /td sha256 /fd sha256 `
+              "$($file.FullName)"
           }
 
       - name: Package
