@@ -4,7 +4,7 @@
 #include <juce_audio_basics/juce_audio_basics.h>
 #include "ClusterEnergy.h"
 #include "ClusterVisualizer.h"
-#include "GraphVerb.h"
+#include "Graphverb.h"
 #include "KnobComponent.h"
 #include "ButtonComponent.h"
 #include "ScopeComponent.h"
@@ -12,17 +12,17 @@
 /**
  * @brief Editor class for the GraphVerb processor.
  */
-class GraphVerbEditor final : public juce::AudioProcessorEditor, juce::Timer {
+class GraphverbEditor final : public juce::AudioProcessorEditor, juce::Timer {
 public:
     /**
      * @brief Constructor for the GraphVerbEditor.
      */
-    explicit GraphVerbEditor(GraphVerb &);
+    explicit GraphverbEditor(Graphverb &);
 
     /**
      * @brief Destructor for the GraphVerbEditor.
      */
-    ~GraphVerbEditor() override = default;
+    ~GraphverbEditor() override = default;
 
     /**
      * @brief Paint the editor's background.
@@ -36,7 +36,7 @@ public:
 
 private:
     /** Reference to the GraphVerb processor */
-    GraphVerb &processor;
+    Graphverb &processor;
 
     /** Tooltip window for displaying information */
     juce::TooltipWindow tooltipWindow;
@@ -59,7 +59,7 @@ private:
     /** Cluster visualizer for displaying the graph structure */
     ClusterVisualizer clusterVisualizer;
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GraphVerbEditor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GraphverbEditor)
 
     /**
      * @brief Timer callback function to update the editor.

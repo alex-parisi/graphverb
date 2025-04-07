@@ -2,7 +2,7 @@
 #define CLUSTER_ENERGY_H
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "GraphVerb.h"
+#include "Graphverb.h"
 
 /**
  * @brief A class that visualizes the cluster energies of a GraphVerb processor.
@@ -13,7 +13,7 @@ public:
      * @brief Constructs a ClusterEnergyView object.
      * @param p The GraphVerb processor to visualize.
      */
-    explicit ClusterEnergyView(GraphVerb &p);
+    explicit ClusterEnergyView(Graphverb &p);
 
     /**
      * @brief Paints the component.
@@ -28,7 +28,7 @@ public:
 
 private:
     /** Reference to the GraphVerb processor. */
-    GraphVerb &processor;
+    Graphverb &processor;
 
     /** Vector to hold the smoothed cluster energies. */
     std::vector<float> smoothedEnergies;

@@ -12,19 +12,19 @@
 #include "SpectralGraph.h"
 
 /**
- * @brief Audio processor for the GraphVerb plugin.
+ * @brief Audio processor for the Graphverb plugin.
  */
-class GraphVerb final : public juce::AudioProcessor {
+class Graphverb final : public juce::AudioProcessor {
 public:
     /**
-     * @brief Constructor for the GraphVerb processor.
+     * @brief Constructor for the Graphverb processor.
      */
-    GraphVerb();
+    Graphverb();
 
     /**
-     * @brief Destructor for the GraphVerb processor.
+     * @brief Destructor for the Graphverb processor.
      */
-    ~GraphVerb() override = default;
+    ~Graphverb() override = default;
 
     /**
      * @brief Prepare the processor for playback.
@@ -67,7 +67,7 @@ public:
      * @brief Get the name of the processor.
      * @return The name of the processor as a string.
      */
-    const juce::String getName() const override { return "GraphVerb"; }
+    const juce::String getName() const override { return "Graphverb"; }
 
     /**
      * @brief Check if the processor accepts MIDI input.
@@ -179,7 +179,7 @@ private:
     static juce::AudioProcessorValueTreeState::ParameterLayout
     createParameterLayout();
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GraphVerb)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Graphverb)
 };
 
 #endif // GRAPH_VERB_H

@@ -2,7 +2,7 @@
 #define CLUSTER_VISUALIZER_H
 
 #include "ClusterParticle.h"
-#include "GraphVerb.h"
+#include "Graphverb.h"
 
 /**
  * @brief Class for visualizing clusters in the GraphVerb plugin.
@@ -13,7 +13,7 @@ public:
      * @brief Constructor for the ClusterVisualizer.
      * @param processorRef Reference to the GraphVerb processor.
      */
-    explicit ClusterVisualizer(GraphVerb &processorRef);
+    explicit ClusterVisualizer(Graphverb &processorRef);
 
     /**
      * @brief Paints the component.
@@ -28,7 +28,7 @@ public:
 
 private:
     /** Reference to the GraphVerb processor */
-    GraphVerb &processor;
+    Graphverb &processor;
 
     /** Vector of particles for the visualizer. */
     std::vector<ClusterParticle> particles;

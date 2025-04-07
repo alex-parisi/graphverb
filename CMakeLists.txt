@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.30)
 
-project(GraphVerb VERSION 0.1.0)
+project(Graphverb VERSION 0.1.0)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -19,9 +19,9 @@ FetchContent_MakeAvailable(juce)
 # ------------                                                                 #
 ################################################################################
 
-juce_add_plugin(GraphVerb
+juce_add_plugin(Graphverb
         COMPANY_NAME "Scribe Now LLC"
-        PRODUCT_NAME "GraphVerb"
+        PRODUCT_NAME "Graphverb"
         BUNDLE_ID "com.scribenow.graphverb"
         PLUGIN_MANUFACTURER_CODE Juce
         PLUGIN_CODE MJPL
@@ -33,7 +33,7 @@ juce_add_plugin(GraphVerb
         COPY_PLUGIN_AFTER_BUILD TRUE
 )
 
-target_sources(GraphVerb PRIVATE
+target_sources(Graphverb PRIVATE
         Components/SpectralAnalyzer/src/SpectralAnalyzer.cpp
         Components/SpectralGraph/src/SpectralGraph.cpp
         Components/CommunityClustering/src/CommunityClustering.cpp
@@ -41,12 +41,12 @@ target_sources(GraphVerb PRIVATE
         Components/UI/Button/src/ButtonComponent.cpp
         Components/UI/ClusterVisualizer/src/ClusterVisualizer.cpp
         Components/UI/ClusterEnergy/src/ClusterEnergy.cpp
-        GraphVerb/src/GraphVerb.cpp
-        GraphVerb/src/GraphVerbEditor.cpp
+        Graphverb/src/GraphVerb.cpp
+        Graphverb/src/GraphVerbEditor.cpp
 )
 
-target_include_directories(GraphVerb PRIVATE
-        GraphVerb/inc
+target_include_directories(Graphverb PRIVATE
+        Graphverb/inc
         Components/SpectralAnalyzer/inc
         Components/SpectralGraph/inc
         Components/CommunityClustering/inc
@@ -58,9 +58,9 @@ target_include_directories(GraphVerb PRIVATE
         Components/UI/ClusterVisualizer/inc
 )
 
-target_compile_definitions(GraphVerb PRIVATE JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1)
+target_compile_definitions(Graphverb PRIVATE JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1)
 
-target_link_libraries(GraphVerb PRIVATE
+target_link_libraries(Graphverb PRIVATE
         juce::juce_audio_basics
         juce::juce_audio_processors
         juce::juce_audio_utils

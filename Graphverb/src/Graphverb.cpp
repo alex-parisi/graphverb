@@ -1,10 +1,10 @@
-#include "GraphVerb.h"
-#include "GraphVerbEditor.h"
+#include "Graphverb.h"
+#include "GraphverbEditor.h"
 
 /**
  * @brief Constructor for the GraphVerb processor.
  */
-GraphVerb::GraphVerb() :
+Graphverb::Graphverb() :
     AudioProcessor(
             BusesProperties()
                     .withInput("Input", juce::AudioChannelSet::stereo(), true)
@@ -18,7 +18,7 @@ GraphVerb::GraphVerb() :
  * @param sampleRate The sample rate of the audio stream.
  * @param samplesPerBlock The number of samples per block to process.
  */
-void GraphVerb::prepareToPlay(double sampleRate, int samplesPerBlock) {
+void Graphverb::prepareToPlay(double sampleRate, int samplesPerBlock) {
     spectralAnalyzer.reset();
 }
 
@@ -27,7 +27,7 @@ void GraphVerb::prepareToPlay(double sampleRate, int samplesPerBlock) {
  * @param layouts The bus layout to check for support.
  * @return True if the layout is supported, false otherwise.
  */
-bool GraphVerb::isBusesLayoutSupported(const BusesLayout &layouts) const {
+bool Graphverb::isBusesLayoutSupported(const BusesLayout &layouts) const {
     if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::mono() &&
         layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
         return false;
@@ -38,7 +38,7 @@ bool GraphVerb::isBusesLayoutSupported(const BusesLayout &layouts) const {
 /**
  * @brief Process a block of audio and MIDI data.
  */
-void GraphVerb::processBlock(juce::AudioBuffer<float> &buffer,
+void Graphverb::processBlock(juce::AudioBuffer<float> &buffer,
                              juce::MidiBuffer &midiMessages) {
     const int numSamples = buffer.getNumSamples();
     const int numChannels = buffer.getNumChannels();
@@ -164,7 +164,7 @@ void GraphVerb::processBlock(juce::AudioBuffer<float> &buffer,
  * @return The parameter layout for the processor.
  */
 juce::AudioProcessorValueTreeState::ParameterLayout
-GraphVerb::createParameterLayout() {
+Graphverb::createParameterLayout() {
     juce::AudioProcessorValueTreeState::ParameterLayout layout;
     /// Add the parameters
     layout.add(std::make_unique<juce::AudioParameterBool>("bypass", "Bypass",
@@ -184,8 +184,8 @@ GraphVerb::createParameterLayout() {
  * @brief Create an editor for the processor.
  * @return A pointer to the created editor.
  */
-juce::AudioProcessorEditor *GraphVerb::createEditor() {
-    return new GraphVerbEditor(*this);
+juce::AudioProcessorEditor *Graphverb::createEditor() {
+    return new GraphverbEditor(*this);
 }
 
 /**
@@ -194,5 +194,5 @@ juce::AudioProcessorEditor *GraphVerb::createEditor() {
  * @return A pointer to the created processor instance.
  */
 juce::AudioProcessor *JUCE_CALLTYPE createPluginFilter() {
-    return new GraphVerb();
+    return new Graphverb();
 }

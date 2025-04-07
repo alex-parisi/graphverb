@@ -1,6 +1,6 @@
-# GraphVerb
+# Graphverb
 
-**GraphVerb** is a JUCE-based audio plugin that performs dynamic, spectral-aware
+**Graphverb** is a JUCE-based audio plugin that performs dynamic, spectral-aware
 reverb processing using graph analysis and K-Means clustering.
 
 ![GraphVerb](doc/preview.gif)

@@ -1,11 +1,11 @@
-#include "GraphVerbEditor.h"
+#include "GraphverbEditor.h"
 
 /**
  * @brief Constructor for the NBandParametricEQEditor class.
  * @param p A reference to the NBandParametricEQ processor that this editor
  * is associated with.
  */
-GraphVerbEditor::GraphVerbEditor(GraphVerb &p) :
+GraphverbEditor::GraphverbEditor(Graphverb &p) :
     AudioProcessorEditor(p), processor(p), scope(p.getAudioBufferQueue()),
     clusterEnergy(p), clusterVisualizer(p),
     livelinessKnob(p.getParameters(), "liveliness", "Liveliness"),
@@ -33,7 +33,7 @@ GraphVerbEditor::GraphVerbEditor(GraphVerb &p) :
  * @brief Paint the editor's background.
  * @param g The graphics context used for painting.
  */
-void GraphVerbEditor::paint(juce::Graphics &g) {
+void GraphverbEditor::paint(juce::Graphics &g) {
     g.fillAll(getLookAndFeel().findColour(
             juce::ResizableWindow::backgroundColourId));
 }
@@ -41,7 +41,7 @@ void GraphVerbEditor::paint(juce::Graphics &g) {
 /**
  * @brief Resize the editor.
  */
-void GraphVerbEditor::resized() {
+void GraphverbEditor::resized() {
     juce::Rectangle<int> area = getLocalBounds();
 
     juce::Rectangle<int> controlArea = area.removeFromBottom(100);
@@ -67,4 +67,4 @@ void GraphVerbEditor::resized() {
 /**
  * @brief Timer callback function to update the editor.
  */
-void GraphVerbEditor::timerCallback() { repaint(); }
+void GraphverbEditor::timerCallback() { repaint(); }

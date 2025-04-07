@@ -4,7 +4,7 @@
  * @brief Constructs a ClusterEnergyView object.
  * @param p The GraphVerb processor to visualize.
  */
-ClusterEnergyView::ClusterEnergyView(GraphVerb &p) : processor(p) {
+ClusterEnergyView::ClusterEnergyView(Graphverb &p) : processor(p) {
     startTimerHz(60);
     smoothedEnergies.resize(processor.getClusterEnergies().size(), 0.0f);
 }

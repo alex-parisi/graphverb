@@ -4,7 +4,7 @@
  * @brief Constructor for the ClusterVisualizer.
  * @param processorRef Reference to the GraphVerb processor.
  */
-ClusterVisualizer::ClusterVisualizer(GraphVerb &processorRef) :
+ClusterVisualizer::ClusterVisualizer(Graphverb &processorRef) :
     processor(processorRef) {
     initialiseParticles();
     startTimerHz(60);
