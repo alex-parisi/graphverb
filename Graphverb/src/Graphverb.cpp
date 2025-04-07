@@ -40,6 +40,8 @@ bool Graphverb::isBusesLayoutSupported(const BusesLayout &layouts) const {
  */
 void Graphverb::processBlock(juce::AudioBuffer<float> &buffer,
                              juce::MidiBuffer &midiMessages) {
+    juce::ScopedNoDenormals noDenormals;
+
     const int numSamples = buffer.getNumSamples();
     const int numChannels = buffer.getNumChannels();
     std::vector monoBuffer(numSamples, 0.0f);
