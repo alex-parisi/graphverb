@@ -1,0 +1,97 @@
+name: Build and Package Graphverb
+
+on:
+  push:
+    branches: [ main ]
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  build-macos:
+    runs-on: macos-13
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install Dependencies
+        run: |
+          brew install cmake ninja
+
+      - name: Configure
+        run: cmake -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -G Ninja -B build -S .
+
+      - name: Build
+        run: cmake --build build --target Graphverb_All -j 6
+
+      - name: Package
+        run: |
+          mkdir -p dist/macos
+          cp -R ~/Library/Audio/Plug-Ins/VST3/Graphverb.vst3 dist/macos/ || true
+          cp -R ~/Library/Audio/Plug-Ins/Components/Graphverb.component dist/macos/ || true
+          cp -R build/Graphverb_artefacts/Release/Standalone/Graphverb.app dist/macos/ || true
+          cd dist && zip -r Graphverb-macos.zip macos
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Graphverb-macOS
+          path: dist/Graphverb-macos.zip
+
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install Dependencies
+        run: choco install cmake ninja
+
+      - name: Configure
+        run: cmake -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -G "Ninja" -B build -S .
+
+      - name: Build
+        run: cmake --build build --target Graphverb_All -j 6
+
+      - name: Package
+        run: |
+          mkdir dist
+          powershell Compress-Archive -Path build\Graphverb_artefacts\Release\* -DestinationPath dist\Graphverb-windows.zip
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Graphverb-Windows
+          path: dist\Graphverb-windows.zip
+
+  build-linux:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install Dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y cmake ninja-build build-essential libasound2-dev libjack-jackd2-dev
+
+      - name: Configure
+        run: cmake -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -G Ninja -B build -S .
+
+      - name: Build
+        run: cmake --build build --target Graphverb_All -j 6
+
+      - name: Package
+        run: |
+          mkdir -p dist/linux
+          cp -R build/Graphverb_artefacts/Release/* dist/linux/
+          cd dist && zip -r Graphverb-linux.zip linux
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Graphverb-Linux
+          path: dist/Graphverb-linux.zip
