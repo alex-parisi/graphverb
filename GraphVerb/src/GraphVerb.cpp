@@ -109,27 +109,37 @@ void GraphVerb::processBlock(juce::AudioBuffer<float> &buffer,
     tempBuffer.makeCopyOf(buffer);
 
     /// Per-Cluster Reverb Processing
-    for (int i = 0; i < numClusters; ++i) {
-        tempBuffer.makeCopyOf(dryBuffer);
-        communityReverbs[i]->processBlock(tempBuffer);
-        const float weight = clusterEnergies[i];
-        for (int ch = 0; ch < wetBuffer.getNumChannels(); ++ch) {
-            float *wet = wetBuffer.getWritePointer(ch);
-            const float *temp = tempBuffer.getReadPointer(ch);
-            for (int s = 0; s < wetBuffer.getNumSamples(); ++s) {
-                wet[s] += weight * temp[s];
+    if (*parameters.getRawParameterValue("bypass") < 0.5f) {
+        for (int i = 0; i < numClusters; ++i) {
+            tempBuffer.makeCopyOf(dryBuffer);
+            communityReverbs[i]->processBlock(tempBuffer);
+            const float weight = clusterEnergies[i];
+            for (int ch = 0; ch < wetBuffer.getNumChannels(); ++ch) {
+                float *wet = wetBuffer.getWritePointer(ch);
+                const float *temp = tempBuffer.getReadPointer(ch);
+                for (int s = 0; s < wetBuffer.getNumSamples(); ++s) {
+                    wet[s] += weight * temp[s];
+                }
             }
         }
+    } else {
+        // Bypass mode: wet = dry
+        wetBuffer.makeCopyOf(dryBuffer);
     }
 
     /// Dry/Wet mix
     const float dryLevel = *parameters.getRawParameterValue("dryLevel");
+    const float gain = *parameters.getRawParameterValue("gain");
+    const float dB = juce::jmap(gain, 0.0f, 1.0f, -60.0f, 12.0f);
+    const float linearGain = juce::Decibels::decibelsToGain(dB);
     const auto *leftOutput = buffer.getWritePointer(0);
     for (int ch = 0; ch < buffer.getNumChannels(); ++ch) {
-        float *dry = buffer.getWritePointer(ch);
-        const float *wet = wetBuffer.getReadPointer(ch);
+        float* dry = buffer.getWritePointer(ch);
+        const float* wet = wetBuffer.getReadPointer(ch);
         for (int s = 0; s < buffer.getNumSamples(); ++s) {
-            const float mixed = dryLevel * dry[s] + (1.0f - dryLevel) * wet[s];
+            float mixed = dryLevel * dry[s] + (1.0f - dryLevel) * wet[s];
+            /// Apply gain and tanh limiting
+            mixed *= linearGain;
             dry[s] = std::tanh(mixed);
             jassert(std::isfinite(dry[s]));
         }
@@ -151,9 +161,9 @@ GraphVerb::createParameterLayout() {
     layout.add(std::make_unique<juce::AudioParameterBool>("bypass", "Bypass",
                                                           false));
     layout.add(std::make_unique<juce::AudioParameterFloat>(
-            "dryLevel", "Dry Level", 0.0f, 1.0f, 0.1f));
+            "dryLevel", "Dry Level", 0.0f, 1.0f, 0.5f));
     layout.add(std::make_unique<juce::AudioParameterFloat>("gain", "Gain", 0.0f,
-                                                           1.0f, 0.5f));
+                                                           1.0f, 1.0f));
     return layout;
 }
 
