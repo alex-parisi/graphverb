@@ -50,8 +50,8 @@ target_sources(Graphverb PRIVATE
         Components/UI/Button/src/ButtonComponent.cpp
         Components/UI/ClusterVisualizer/src/ClusterVisualizer.cpp
         Components/UI/ClusterEnergy/src/ClusterEnergy.cpp
-        Graphverb/src/GraphVerb.cpp
-        Graphverb/src/GraphVerbEditor.cpp
+        Graphverb/src/Graphverb.cpp
+        Graphverb/src/GraphverbEditor.cpp
 )
 
 target_include_directories(Graphverb PRIVATE
