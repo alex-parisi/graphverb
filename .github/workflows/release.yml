@@ -48,25 +48,23 @@ jobs:
           echo "App bundle contents:"
           find build/Graphverb_artefacts/Release/Standalone/Graphverb.app
 
-          echo "Signing standalone binary inside app..."
+          echo "Signing main binary..."
           codesign --force --verbose --options runtime \
-            --timestamp=http://timestamp.apple.com \
-            --sign "Developer ID Application: ScribeNow LLC (NY)" \
-            build/Graphverb_artefacts/Release/Standalone/Graphverb.app/Contents/MacOS/Graphverb
+            --timestamp --sign "Developer ID Application: ScribeNow LLC (NY)" \
+            build/Graphverb_artefacts/Release/Standalone/Graphverb.app/Contents/MacOS/Graphverb 2>&1
 
-          echo "Signing app bundle..."
+          echo "Signing full app bundle..."
           codesign --deep --force --verbose --options runtime \
-            --timestamp=http://timestamp.apple.com \
-            --sign "Developer ID Application: ScribeNow LLC (NY)" \
-            build/Graphverb_artefacts/Release/Standalone/Graphverb.app
+            --timestamp --sign "Developer ID Application: ScribeNow LLC (NY)" \
+            build/Graphverb_artefacts/Release/Standalone/Graphverb.app 2>&1
 
-          echo "Copying signed files..."
+          echo "Verifying code signature..."
+          codesign --verify --deep --verbose=4 build/Graphverb_artefacts/Release/Standalone/Graphverb.app || exit 1
+
+          echo "Copying signed app..."
           cp -R build/Graphverb_artefacts/Release/Standalone/Graphverb.app dist/macos/
 
           cd dist && zip -r Graphverb-macos.zip macos
-
-          echo "Contents of ZIP:"
-          unzip -l Graphverb-macos.zip
 
       - name: Notarize Plugin
         uses: GuillaumeFalourd/xcode-notarize@v1
@@ -119,48 +117,31 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
 
-          # Decode the cert
+          # Decode cert again to be safe
           [System.IO.File]::WriteAllBytes("certificate.pfx", [Convert]::FromBase64String("${{ secrets.MACOS_CERTIFICATE_BASE64 }}"))
 
-          # Find signtool.exe
-          $signtoolPath = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" `
-            -latest -products * -requires Microsoft.Component.MSBuild -find "**\signtool.exe"
+          # Find signtool
+          $signtool = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" `
+            -latest -products * -requires Microsoft.Component.MSBuild `
+            -find "**\signtool.exe"
 
-          if (-not $signtoolPath) {
+          if (-not $signtool) {
             Write-Error "signtool.exe not found"
             exit 1
           }
 
-          Write-Host "Found signtool at: $signtoolPath"
+          Write-Host "Using signtool at $signtool"
 
-          $filesToSign = Get-ChildItem -Recurse -Path build\Graphverb_artefacts\Release\ -Include *.exe, *.dll
-
-          foreach ($file in $filesToSign) {
+          $files = Get-ChildItem -Recurse -Path build\Graphverb_artefacts\Release -Include *.exe, *.dll
+          foreach ($file in $files) {
             Write-Host "Signing $($file.FullName)..."
+            & $signtool sign /nologo /debug /f certificate.pfx /p $env:CERT_PASSWORD `
+              /tr http://timestamp.digicert.com /td sha256 /fd sha256 "$($file.FullName)" 2>&1 | Tee-Object -Variable signLog
 
-            $arguments = @(
-              "sign",
-              "/nologo",
-              "/debug",
-              "/f", "certificate.pfx",
-              "/p", "$env:CERT_PASSWORD",
-              "/tr", "http://timestamp.digicert.com",
-              "/td", "sha256",
-              "/fd", "sha256",
-              "$($file.FullName)"
-            )
-
-            $process = Start-Process -FilePath $signtoolPath `
-                                     -ArgumentList $arguments `
-                                     -Wait `
-                                     -PassThru `
-                                     -NoNewWindow:$false
-
-            if ($process.ExitCode -ne 0) {
-              Write-Error "Signing failed for $($file.FullName) with exit code $($process.ExitCode)"
-              exit $process.ExitCode
-            } else {
-              Write-Host "Signed $($file.Name) successfully."
+            if ($LASTEXITCODE -ne 0) {
+              Write-Error "Signing failed for $($file.FullName)"
+              $signLog
+              exit 1
             }
           }
 
