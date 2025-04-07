@@ -63,6 +63,9 @@ jobs:
           cp -R build/Graphverb_artefacts/Release/Standalone/Graphverb.app dist/macos/ || true
 
           cd dist && zip -r Graphverb-macos.zip macos
+          
+          echo "Contents of ZIP:"
+          unzip -l dist/Graphverb-macos.zip
 
       - name: Notarize Plugin
         uses: GuillaumeFalourd/xcode-notarize@v1
@@ -71,6 +74,7 @@ jobs:
           primary-bundle-id: com.scribenow.graphverb
           appstore-connect-username: ${{ secrets.APPLE_DEVELOPER_ID }}
           appstore-connect-password: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          verbose: true
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -114,7 +118,8 @@ jobs:
           path: dist\Graphverb-windows.zip
 
   build-linux:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
+
 
     steps:
       - name: Checkout
