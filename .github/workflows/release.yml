@@ -90,14 +90,14 @@ jobs:
           
           echo "Notarization result:"
           cat notarization_result.json
-          
-          UUID=$(jq -r '.id' < notarization_result.json)
-          
-          echo "Fetching notarization log..."
-          xcrun notarytool log "$UUID" \
-            --apple-id "${{ secrets.APPLE_DEVELOPER_ID }}" \
-            --team-id "${{ secrets.APPLE_TEAM_ID }}" \
-            --password "${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}"
+
+      - name: Staple Notarization Ticket
+        run: |
+          xcrun stapler staple dist/Graphverb-macos.zip
+
+      - name: Verify Signing
+        run: |
+          spctl --assess --type exec --verbose=4 dist/macos/Graphverb.app
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
