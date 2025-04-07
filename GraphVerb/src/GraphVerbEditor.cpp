@@ -12,7 +12,7 @@ GraphVerbEditor::GraphVerbEditor(GraphVerb &p) :
     gainKnob(p.getParameters(), "gain", "Gain"),
     intensityKnob(p.getParameters(), "intensity", "Intensity"),
     bypassButton(p.getParameters(), "bypass", "Bypass"),
-    invertButton(p.getParameters(), "invert", "Invert") {
+    invertButton(p.getParameters(), "invert", "Shrink") {
 
     addAndMakeVisible(livelinessKnob);
     addAndMakeVisible(gainKnob);
@@ -50,9 +50,9 @@ void GraphVerbEditor::resized() {
     intensityKnob.setBounds(
             controlArea.removeFromLeft(controlArea.getWidth() / 4));
     gainKnob.setBounds(controlArea.removeFromLeft(controlArea.getWidth() / 3));
-    bypassButton.setBounds(
-            controlArea.removeFromLeft(controlArea.getWidth() / 2));
     invertButton.setBounds(
+            controlArea.removeFromLeft(controlArea.getWidth() / 2));
+    bypassButton.setBounds(
             controlArea.removeFromLeft(controlArea.getWidth() / 1));
 
     juce::Rectangle<int> clusterArea = area;

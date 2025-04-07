@@ -86,7 +86,14 @@ CommunityClustering::clusterNodes(const std::vector<GraphNode> &nodes,
  */
 float CommunityClustering::distanceSquared(const GraphNode &node,
                                            const Centroid &centroid) {
-    const float df = node.frequency - centroid.frequency;
-    const float dm = node.magnitude - centroid.magnitude;
+    const float logF_node = std::log(node.frequency + 1e-6f);
+    const float logF_centroid = std::log(centroid.frequency + 1e-6f);
+
+    const float dB_node = 20.0f * std::log10(node.magnitude + 1e-6f);
+    const float dB_centroid = 20.0f * std::log10(centroid.magnitude + 1e-6f);
+
+    const float df = logF_node - logF_centroid;
+    const float dm = dB_node - dB_centroid;
+
     return df * df + dm * dm;
 }

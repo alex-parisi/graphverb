@@ -40,9 +40,9 @@ struct CommunityReverb {
                           const float intensity) {
         /// TODO - new plugin with N bandpass filters that get their own reverbs
         if (inverted) {
-            params.roomSize = juce::jlimit(0.0f, 1.0f, 1.0f - avgEnergy);
-        } else {
             params.roomSize = juce::jlimit(0.0f, 1.0f, avgEnergy);
+        } else {
+            params.roomSize = juce::jlimit(0.0f, 1.0f, 1.0f - avgEnergy);
         }
         params.wetLevel = juce::jlimit(0.0f, 1.0f, intensity);
         reverb.setParameters(params);
