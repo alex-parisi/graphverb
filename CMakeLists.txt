@@ -23,14 +23,14 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     set(GRAPHVERB_FORMATS VST3 AU Standalone)
 elseif (CMAKE_SYSTEM_NAME STREQUAL "Windows")
     set(GRAPHVERB_FORMATS VST3 Standalone)
-else()
+else ()
     # Linux, Raspberry Pi, etc.
     set(GRAPHVERB_FORMATS VST3 Standalone)
-endif()
+endif ()
 
-if(UNIX AND NOT APPLE)
+if (UNIX AND NOT APPLE)
     add_definitions(-DJUCE_WEB_BROWSER=0)
-endif()
+endif ()
 
 juce_add_plugin(Graphverb
         COMPANY_NAME "Scribe Now LLC"
@@ -80,3 +80,9 @@ target_link_libraries(Graphverb PRIVATE
         juce::juce_gui_basics
         juce::juce_dsp
 )
+
+# Link libcurl on Linux only
+if (UNIX AND NOT APPLE)
+    find_package(CURL REQUIRED)
+    target_link_libraries(Graphverb PRIVATE CURL::libcurl)
+endif ()
