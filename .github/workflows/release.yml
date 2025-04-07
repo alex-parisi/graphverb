@@ -26,8 +26,6 @@ jobs:
           security default-keychain -s build.keychain
           security unlock-keychain -p "build" build.keychain
           security import certificate.p12 -k build.keychain -P "$MACOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
-          CERT_SHA=$(security find-certificate -c "ScribeNow LLC" -a -Z build.keychain | awk '/SHA-1/{print $NF}')
-          security add-trusted-cert -d -r trustRoot -k build.keychain /Users/runner/work/graphverb/graphverb/certificate.p12
           security set-key-partition-list -S apple-tool:,apple: -s -k "build" build.keychain
           security find-identity -v -p codesigning build.keychain
         env:
