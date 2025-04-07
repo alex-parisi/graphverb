@@ -27,6 +27,7 @@ jobs:
           security unlock-keychain -p "build" build.keychain
           security import certificate.p12 -k build.keychain -P "$MACOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple: -s -k "build" build.keychain
+          security find-identity -v -p codesigning build.keychain
         env:
           MACOS_CERTIFICATE_BASE64: ${{ secrets.MACOS_CERTIFICATE_BASE64 }}
           MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
@@ -40,14 +41,27 @@ jobs:
       - name: Package and Sign
         run: |
           mkdir -p dist/macos
-          # Sign plugins
-          codesign --deep --force --options runtime --sign "Developer ID Application: ScribeNow LLC (NY)" build/Graphverb_artefacts/Release/Standalone/Graphverb.app
-          codesign --force --sign "Developer ID Application: ScribeNow LLC (NY)" ~/Library/Audio/Plug-Ins/VST3/Graphverb.vst3 || true
-          codesign --force --sign "Developer ID Application: ScribeNow LLC (NY)" ~/Library/Audio/Plug-Ins/Components/Graphverb.component || true
-          # Copy signed files
+
+          echo "Signing standalone app..."
+          timeout 60s codesign --deep --force --verbose --options runtime \
+            --sign "Developer ID Application: ScribeNow LLC (NY)" \
+            build/Graphverb_artefacts/Release/Standalone/Graphverb.app
+
+          echo "Signing VST3..."
+          timeout 30s codesign --force --verbose \
+            --sign "Developer ID Application: ScribeNow LLC (NY)" \
+            ~/Library/Audio/Plug-Ins/VST3/Graphverb.vst3 || echo "VST3 signing skipped or failed"
+
+          echo "Signing AU..."
+          timeout 30s codesign --force --verbose \
+            --sign "Developer ID Application: ScribeNow LLC (NY)" \
+            ~/Library/Audio/Plug-Ins/Components/Graphverb.component || echo "AU signing skipped or failed"
+
+          echo "Copying signed files..."
           cp -R ~/Library/Audio/Plug-Ins/VST3/Graphverb.vst3 dist/macos/ || true
           cp -R ~/Library/Audio/Plug-Ins/Components/Graphverb.component dist/macos/ || true
           cp -R build/Graphverb_artefacts/Release/Standalone/Graphverb.app dist/macos/ || true
+
           cd dist && zip -r Graphverb-macos.zip macos
 
       - name: Notarize Plugin
@@ -64,6 +78,11 @@ jobs:
           name: Graphverb-macOS
           path: dist/Graphverb-macos.zip
 
+      - name: Cleanup Keychain
+        if: always()
+        run: |
+          security delete-keychain build.keychain  
+
   build-windows:
     runs-on: windows-latest
 
@@ -71,15 +90,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Dependencies
+      - name: Install Ninja
         run: choco install ninja
 
-      - name: Configure (MSVC)
-        run: |
-          cmake -DCMAKE_BUILD_TYPE=Release -G "Ninja" -B build -S .
-        env:
-          CC: cl
-          CXX: cl
+      - name: Set up MSVC Developer Command Prompt
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Configure with MSVC
+        run: cmake -DCMAKE_BUILD_TYPE=Release -G "Ninja" -B build -S .
 
       - name: Build
         run: cmake --build build --target Graphverb_All -j 6
@@ -112,7 +130,7 @@ jobs:
           libgl1-mesa-dev libcurl4-openssl-dev \
           libxrandr-dev libxinerama-dev libxcursor-dev \
           libxcomposite-dev libxext-dev \
-          libgtk-3-dev
+          libgtk2.0-dev libwebkit2gtk-4.0-dev
 
       - name: Configure
         run: cmake -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -G Ninja -B build -S .
