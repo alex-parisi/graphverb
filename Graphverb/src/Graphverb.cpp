@@ -20,6 +20,62 @@ Graphverb::Graphverb() :
  */
 void Graphverb::prepareToPlay(double sampleRate, int samplesPerBlock) {
     spectralAnalyzer.reset();
+
+    threadShouldExit = false;
+    analysisThread = std::thread([this, sampleRate] {
+        std::vector<float> inputBuffer;
+        while (!threadShouldExit.load()) {
+            if (this->analysisInputQueue.pop(inputBuffer)) {
+                /// Run spectral + graph + clustering
+                spectralAnalyzer.pushSamples(
+                        inputBuffer.data(),
+                        static_cast<int>(inputBuffer.size()));
+                const auto &magnitudes = spectralAnalyzer.getLatestMagnitudes();
+                spectralGraph.buildGraph(magnitudes,
+                                         static_cast<float>(sampleRate), 1024);
+                const std::vector<int> clusterAssignments =
+                        CommunityClustering::clusterNodes(spectralGraph.nodes,
+                                                          12);
+                std::vector newEnergies(12, 0.0f);
+                std::vector clusterCounts(12, 0);
+                for (size_t i = 0; i < spectralGraph.nodes.size(); ++i) {
+                    const int cluster = clusterAssignments[i];
+                    newEnergies[cluster] += spectralGraph.nodes[i].magnitude;
+                    clusterCounts[cluster]++;
+                }
+                for (int i = 0; i < 12; ++i)
+                    newEnergies[i] =
+                            clusterCounts[i] > 0
+                                    ? (newEnergies[i] /
+                                       static_cast<float>(clusterCounts[i]))
+                                    : 0.0f;
+                /// Normalize
+                if (const float energySum = std::accumulate(
+                            newEnergies.begin(), newEnergies.end(), 0.0f);
+                    energySum > 0.0f) {
+                    for (float &e: newEnergies)
+                        e /= energySum;
+                }
+                /// Store atomically
+                {
+                    std::lock_guard lock(energyMutex);
+                    latestClusterEnergies = std::move(newEnergies);
+                }
+            } else {
+                /// avoid busy loop
+                std::this_thread::sleep_for(std::chrono::milliseconds(2));
+            }
+        }
+    });
+}
+
+/**
+ * @brief Release any resources used by the processor.
+ */
+void Graphverb::releaseResources() {
+    threadShouldExit = true;
+    if (analysisThread.joinable())
+        analysisThread.join();
 }
 
 /**
@@ -39,7 +95,7 @@ bool Graphverb::isBusesLayoutSupported(const BusesLayout &layouts) const {
  * @brief Process a block of audio and MIDI data.
  */
 void Graphverb::processBlock(juce::AudioBuffer<float> &buffer,
-                             juce::MidiBuffer &midiMessages) {
+                             juce::MidiBuffer &) {
     juce::ScopedNoDenormals noDenormals;
 
     const int numSamples = buffer.getNumSamples();
@@ -48,65 +104,40 @@ void Graphverb::processBlock(juce::AudioBuffer<float> &buffer,
 
     /// Stereo to mono conversion
     if (numChannels >= 2) {
-        auto *left = buffer.getReadPointer(0);
-        auto *right = buffer.getReadPointer(1);
+        const float *left = buffer.getReadPointer(0);
+        const float *right = buffer.getReadPointer(1);
         for (int i = 0; i < numSamples; ++i)
             monoBuffer[i] = 0.5f * (left[i] + right[i]);
     } else {
-        auto *ch = buffer.getReadPointer(0);
+        const float *ch = buffer.getReadPointer(0);
         std::copy_n(ch, numSamples, monoBuffer.begin());
     }
 
-    /// Spectral Analysis and Graph Construction
-    spectralAnalyzer.pushSamples(monoBuffer.data(), numSamples);
-    const auto &magnitudes = spectralAnalyzer.getLatestMagnitudes();
-    spectralGraph.buildGraph(magnitudes, static_cast<float>(getSampleRate()),
-                             1 << 10);
+    /// Send monoBuffer to background thread for analysis
+    analysisInputQueue.push(monoBuffer);
 
-    /// Community Detection
-    /// TODO - turn this into a knob
+    /// Safely copy the latest energies from background thread
+    {
+        std::lock_guard lock(energyMutex);
+        if (!latestClusterEnergies.empty()) {
+            clusterEnergies = latestClusterEnergies;
+        }
+    }
+
+    /// Resize reverbs if needed
     constexpr int numClusters = 12;
-    const std::vector<int> clusterAssignments =
-            CommunityClustering::clusterNodes(spectralGraph.nodes, numClusters);
-
-    /// Compute Average Energy per Cluster
-    clusterEnergies.resize(numClusters);
-    std::vector clusterCounts(numClusters, 0);
-    for (size_t i = 0; i < spectralGraph.nodes.size(); ++i) {
-        const int cluster = clusterAssignments[i];
-        clusterEnergies[cluster] += spectralGraph.nodes[i].magnitude;
-        clusterCounts[cluster]++;
-    }
-    for (int i = 0; i < numClusters; ++i) {
-        clusterEnergies[i] = clusterCounts[i] > 0
-                                     ? (clusterEnergies[i] /
-                                        static_cast<float>(clusterCounts[i]))
-                                     : 0.0f;
-    }
-
-    /// Normalize Energy (Prevent clipping)
-    const float energySum = std::accumulate(clusterEnergies.begin(),
-                                            clusterEnergies.end(), 0.0f);
-    if (energySum > 0.0f) {
-        for (float &e: clusterEnergies)
-            e /= energySum;
-    }
-
-    /// Resize Community Reverbs if needed
-    if (communityReverbs.size() != static_cast<size_t>(numClusters)) {
+    if (communityReverbs.size() != numClusters) {
         communityReverbs.clear();
         for (int i = 0; i < numClusters; ++i)
             communityReverbs.push_back(std::make_unique<CommunityReverb>());
     }
+    /// Update reverb parameters
     const float intensity = *parameters.getRawParameterValue("intensity");
     for (int i = 0; i < numClusters; ++i) {
-        if (*parameters.getRawParameterValue("expand") < 0.5f) {
-            communityReverbs[i]->updateParameters(clusterEnergies[i], false,
-                                                  intensity);
-        } else {
-            communityReverbs[i]->updateParameters(clusterEnergies[i], true,
-                                                  intensity);
-        }
+        const bool expand = *parameters.getRawParameterValue("expand") >= 0.5f;
+        communityReverbs[i]->updateParameters(
+                (i < clusterEnergies.size() ? clusterEnergies[i] : 0.0f),
+                expand, intensity);
     }
 
     /// Prepare buffers
@@ -118,12 +149,14 @@ void Graphverb::processBlock(juce::AudioBuffer<float> &buffer,
     juce::AudioBuffer<float> tempBuffer;
     tempBuffer.makeCopyOf(buffer);
 
-    /// Per-Cluster Reverb Processing
+    /// Apply per-cluster reverbs
     if (*parameters.getRawParameterValue("bypass") < 0.5f) {
         for (int i = 0; i < numClusters; ++i) {
             tempBuffer.makeCopyOf(dryBuffer);
             communityReverbs[i]->processBlock(tempBuffer);
-            const float weight = clusterEnergies[i];
+            const float weight =
+                    (i < clusterEnergies.size()) ? clusterEnergies[i] : 0.0f;
+
             for (int ch = 0; ch < wetBuffer.getNumChannels(); ++ch) {
                 float *wet = wetBuffer.getWritePointer(ch);
                 const float *temp = tempBuffer.getReadPointer(ch);
@@ -133,32 +166,28 @@ void Graphverb::processBlock(juce::AudioBuffer<float> &buffer,
             }
         }
     } else {
-        /// Bypass mode: wet = dry
         wetBuffer.makeCopyOf(dryBuffer);
     }
 
-    /// Dry/Wet mix
+    /// Mix dry/wet and apply gain
     const float liveliness = *parameters.getRawParameterValue("liveliness");
     const float dryLevel = 1.0f - liveliness;
     const float gain = *parameters.getRawParameterValue("gain");
     const float dB = juce::jmap(gain, 0.0f, 1.0f, -60.0f, 12.0f);
     const float linearGain = juce::Decibels::decibelsToGain(dB);
-    const auto *leftOutput = buffer.getWritePointer(0);
+    const float *leftOutput = buffer.getWritePointer(0);
     for (int ch = 0; ch < buffer.getNumChannels(); ++ch) {
-        float *dry = buffer.getWritePointer(ch);
+        float *out = buffer.getWritePointer(ch);
         const float *wet = wetBuffer.getReadPointer(ch);
         for (int s = 0; s < buffer.getNumSamples(); ++s) {
-            float mixed = dryLevel * dry[s] + (1.0f - dryLevel) * wet[s];
-            /// Apply gain and tanh limiting
+            float mixed = dryLevel * out[s] + (1.0f - dryLevel) * wet[s];
             mixed *= linearGain;
-            dry[s] = std::tanh(mixed);
-            jassert(std::isfinite(dry[s]));
+            out[s] = std::tanh(mixed);
+            jassert(std::isfinite(out[s]));
         }
     }
-
-    /// Collect the final signal after the mix is written
-    scopeDataCollector.process(leftOutput,
-                               static_cast<size_t>(buffer.getNumSamples()));
+    /// Collect signal for scope
+    scopeDataCollector.process(leftOutput, static_cast<size_t>(numSamples));
 }
 
 /**

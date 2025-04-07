@@ -10,6 +10,7 @@
 #include "ScopeDataCollector.h"
 #include "SpectralAnalyzer.h"
 #include "SpectralGraph.h"
+#include "ThreadSafeQueue.h"
 
 /**
  * @brief Audio processor for the Graphverb plugin.
@@ -36,7 +37,7 @@ public:
     /**
      * @brief Release any resources used by the processor.
      */
-    void releaseResources() override {}
+    void releaseResources() override;
 
     /**
      * @brief Check if the processor supports the given bus layout.
@@ -171,6 +172,21 @@ private:
 
     /** Scope collector for visualizing audio data. */
     ScopeDataCollector<float> scopeDataCollector{audioBufferQueue};
+
+    /** Thread-safe queue for passing audio data to the analysis thread. */
+    ThreadSafeQueue<float> analysisInputQueue;
+
+    /** Thread for performing spectral analysis */
+    std::thread analysisThread;
+
+    /** Flag to indicate if the analysis thread should exit */
+    std::atomic<bool> threadShouldExit;
+
+    /** The latest cluster energies from the analysis thread */
+    std::vector<float> latestClusterEnergies;
+
+    /** Mutex for synchronizing access to the cluster energies */
+    std::mutex energyMutex;
 
     /**
      * @brief Create the parameter layout for the processor.
