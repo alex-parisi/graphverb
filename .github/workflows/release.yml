@@ -175,43 +175,36 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
 
-          # Decode cert again to be safe
-          [System.IO.File]::WriteAllBytes("certificate.pfx", [Convert]::FromBase64String("${{ secrets.MACOS_CERTIFICATE_BASE64 }}"))
+          Write-Host "Using fallback signtool path..."
+          $signtool = "C:\Program Files (x86)\Microsoft SDKs\ClickOnce\SignTool\signtool.exe"
 
-          # Locate signtool.exe via VS setup
-          $signtool = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" `
-            -latest -products * -requires Microsoft.Component.MSBuild -property installationPath
-
-          if (-not $signtool) {
-            Write-Error "Visual Studio not found"
+          if (-not (Test-Path $signtool)) {
+            Write-Error "signtool.exe not found at fallback path"
             exit 1
           }
 
-          $signtoolPath = Join-Path $signtool "SDK\Bin\10.0.22621.0\x64\signtool.exe"
-          if (-not (Test-Path $signtoolPath)) {
-            # fallback search
-            $signtoolPath = Get-ChildItem -Path $signtool -Recurse -Filter signtool.exe -ErrorAction SilentlyContinue | Select-Object -First 1 | ForEach-Object { $_.FullName }
-          }
-
-          if (-not (Test-Path $signtoolPath)) {
-            Write-Error "signtool.exe not found"
-            exit 1
-          }
-
-          Write-Host "Using signtool at $signtoolPath"
-
-          $files = Get-ChildItem -Recurse -Path build\Graphverb_artefacts\Release -Include *.exe, *.dll
+          Write-Host "Signing assemblies..."
+          $files = Get-ChildItem -Recurse -Path build\Graphverb_artefacts\Release -Include *.exe, *.dll -File
           foreach ($file in $files) {
             Write-Host "Signing $($file.FullName)..."
-            & $signtoolPath sign /nologo /debug /f certificate.pfx /p "$env:CERT_PASSWORD" `
-              /tr http://timestamp.digicert.com /td sha256 /fd sha256 "$($file.FullName)" 2>&1 | Tee-Object -Variable signLog
+            & $signtool sign /tr http://timestamp.digicert.com /td sha256 /fd sha256 /f certificate.pfx /p "$env:CERT_PASSWORD" "$($file.FullName)"
 
             if ($LASTEXITCODE -ne 0) {
-              Write-Error "Signing failed for $($file.FullName)"
-              $signLog
-              exit 1
+              Write-Error "$($file.FullName) is not signed. Exit."
+              exit $LASTEXITCODE
             }
           }
+
+          Write-Host "Verifying signatures..."
+          foreach ($file in $files) {
+            & $signtool verify /pa /q "$($file.FullName)"
+            if ($LASTEXITCODE -ne 0) {
+              Write-Error "$($file.FullName) failed verification. Exit."
+              exit $LASTEXITCODE
+            }
+          }
+
+          Write-Host "All files signed and verified successfully."
 
       - name: Package
         run: |
