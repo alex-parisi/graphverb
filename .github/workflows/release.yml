@@ -8,141 +8,141 @@ env:
   BUILD_TYPE: Release
 
 jobs:
-#  build-macos:
-#    runs-on: macos-13
-#
-#    steps:
-#      - name: Checkout
-#        uses: actions/checkout@v4
-#
-#      - name: Install Dependencies
-#        run: |
-#          brew install cmake ninja
-#
-#      - name: Set up Code Signing Certificate
-#        run: |
-#          echo "$MACOS_CERTIFICATE_BASE64" | base64 --decode > certificate.p12
-#
-#          security create-keychain -p "build" build.keychain
-#          security default-keychain -s build.keychain
-#          security unlock-keychain -p "build" build.keychain
-#          security import certificate.p12 -k build.keychain -P "$MACOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
-#          security set-key-partition-list -S apple-tool:,apple: -s -k "build" build.keychain
-#          security list-keychains -s build.keychain
-#          security find-identity -v -p codesigning build.keychain
-#        env:
-#          MACOS_CERTIFICATE_BASE64: ${{ secrets.MACOS_CERTIFICATE_BASE64 }}
-#          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
-#
-#      - name: Configure
-#        run: cmake -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -G Ninja -B build -S .
-#
-#      - name: Build
-#        run: cmake --build build --target Graphverb_All -j 6
-#
-#      - name: Sign Application
-#        run: |
-#          set -e
-#          CERT_NAME=$(security find-identity -v -p codesigning build.keychain | grep "ScribeNow LLC" | sed -E 's/.*"(.+)"$/\1/' | head -n 1)
-#          echo "Using cert: $CERT_NAME"
-#          security unlock-keychain -p "build" build.keychain
-#          security set-key-partition-list -S apple-tool:,apple: -s -k "build" build.keychain
-#
-#          echo "Signing main binary..."
-#          codesign --force --verbose --sign "$CERT_NAME" \
-#            --options runtime --timestamp \
-#            build/Graphverb_artefacts/Release/Standalone/Graphverb.app/Contents/MacOS/Graphverb
-#
-#          echo "Signing full app bundle..."
-#          codesign --force --deep --verbose --sign "$CERT_NAME" \
-#            --options runtime --timestamp \
-#            build/Graphverb_artefacts/Release/Standalone/Graphverb.app
-#
-#          echo "Verifying signature..."
-#          codesign --verify --deep --strict --verbose=4 build/Graphverb_artefacts/Release/Standalone/Graphverb.app
-#
-#      - name: Sign VST3
-#        run: |
-#          set -e
-#          CERT_NAME=$(security find-identity -v -p codesigning build.keychain | grep "ScribeNow LLC" | sed -E 's/.*"(.+)"$/\1/' | head -n 1)
-#          echo "Using cert: $CERT_NAME"
-#          security unlock-keychain -p "build" build.keychain
-#          security set-key-partition-list -S apple-tool:,apple: -s -k "build" build.keychain
-#
-#          echo "Signing VST3..."
-#          codesign --force --deep --verbose --sign "$CERT_NAME" \
-#            --options runtime --timestamp \
-#            build/Graphverb_artefacts/Release/VST3/Graphverb.vst3
-#
-#          echo "Verifying signature..."
-#          codesign --verify --deep --strict --verbose=4 build/Graphverb_artefacts/Release/VST3/Graphverb.vst3
-#
-#      - name: Sign AU
-#        run: |
-#          set -e
-#          CERT_NAME=$(security find-identity -v -p codesigning build.keychain | grep "ScribeNow LLC" | sed -E 's/.*"(.+)"$/\1/' | head -n 1)
-#          echo "Using cert: $CERT_NAME"
-#          security unlock-keychain -p "build" build.keychain
-#          security set-key-partition-list -S apple-tool:,apple: -s -k "build" build.keychain
-#
-#          echo "Signing AU..."
-#          codesign --force --deep --verbose --sign "$CERT_NAME" \
-#            --options runtime --timestamp \
-#            build/Graphverb_artefacts/Release/AU/Graphverb.component
-#
-#          echo "Verifying signature..."
-#          codesign --verify --deep --strict --verbose=4 build/Graphverb_artefacts/Release/AU/Graphverb.component
-#
-#      - name: Package for notarization
-#        run: |
-#          mkdir -p dist/notarization
-#          cp -R build/Graphverb_artefacts/Release/Standalone/Graphverb.app dist/notarization/
-#          cp -R build/Graphverb_artefacts/Release/VST3/Graphverb.vst3 dist/notarization/
-#          cp -R build/Graphverb_artefacts/Release/AU/Graphverb.component dist/notarization/
-#          cd dist && zip -r Graphverb-notarization.zip notarization
-#
-#      - name: Notarize App
-#        run: |
-#          xcrun notarytool submit dist/Graphverb-notarization.zip \
-#            --apple-id "${{ secrets.APPLE_DEVELOPER_ID }}" \
-#            --team-id "${{ secrets.APPLE_TEAM_ID }}" \
-#            --password "${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}" \
-#            --wait --output-format json > notarization_result.json
-#
-#          echo "Notarization result:"
-#          cat notarization_result.json
-#
-#      - name: Staple Notarization Ticket
-#        run: |
-#          xcrun stapler staple build/Graphverb_artefacts/Release/Standalone/Graphverb.app
-#          xcrun stapler staple build/Graphverb_artefacts/Release/VST3/Graphverb.vst3
-#          xcrun stapler staple build/Graphverb_artefacts/Release/AU/Graphverb.component
-#          xcrun stapler validate build/Graphverb_artefacts/Release/Standalone/Graphverb.app
-#          xcrun stapler validate build/Graphverb_artefacts/Release/VST3/Graphverb.vst3
-#          xcrun stapler validate build/Graphverb_artefacts/Release/AU/Graphverb.component
-#
-#      - name: Package for release
-#        run: |
-#          mkdir -p dist/macos
-#          cp -R build/Graphverb_artefacts/Release/Standalone/Graphverb.app dist/macos/
-#          cp -R build/Graphverb_artefacts/Release/VST3/Graphverb.vst3 dist/macos/
-#          cp -R build/Graphverb_artefacts/Release/AU/Graphverb.component dist/macos/
-#          cd dist && zip -r Graphverb-macos.zip macos
-#
-#      - name: Verify Gatekeeper
-#        run: |
-#          spctl --assess --type exec --verbose=4 dist/macos/Graphverb.app
-#
-#      - name: Upload Artifacts
-#        uses: actions/upload-artifact@v4
-#        with:
-#          name: Graphverb-macOS
-#          path: dist/Graphverb-macos.zip
-#
-#      - name: Cleanup Keychain
-#        if: always()
-#        run: |
-#          security delete-keychain build.keychain
+  build-macos:
+    runs-on: macos-13
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Dependencies
+        run: |
+          brew install cmake ninja
+
+      - name: Set up Code Signing Certificate
+        run: |
+          echo "$MACOS_CERTIFICATE_BASE64" | base64 --decode > certificate.p12
+
+          security create-keychain -p "build" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "build" build.keychain
+          security import certificate.p12 -k build.keychain -P "$MACOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "build" build.keychain
+          security list-keychains -s build.keychain
+          security find-identity -v -p codesigning build.keychain
+        env:
+          MACOS_CERTIFICATE_BASE64: ${{ secrets.MACOS_CERTIFICATE_BASE64 }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+
+      - name: Configure
+        run: cmake -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -G Ninja -B build -S .
+
+      - name: Build
+        run: cmake --build build --target Graphverb_All -j 6
+
+      - name: Sign Application
+        run: |
+          set -e
+          CERT_NAME=$(security find-identity -v -p codesigning build.keychain | grep "ScribeNow LLC" | sed -E 's/.*"(.+)"$/\1/' | head -n 1)
+          echo "Using cert: $CERT_NAME"
+          security unlock-keychain -p "build" build.keychain
+          security set-key-partition-list -S apple-tool:,apple: -s -k "build" build.keychain
+
+          echo "Signing main binary..."
+          codesign --force --verbose --sign "$CERT_NAME" \
+            --options runtime --timestamp \
+            build/Graphverb_artefacts/Release/Standalone/Graphverb.app/Contents/MacOS/Graphverb
+
+          echo "Signing full app bundle..."
+          codesign --force --deep --verbose --sign "$CERT_NAME" \
+            --options runtime --timestamp \
+            build/Graphverb_artefacts/Release/Standalone/Graphverb.app
+
+          echo "Verifying signature..."
+          codesign --verify --deep --strict --verbose=4 build/Graphverb_artefacts/Release/Standalone/Graphverb.app
+
+      - name: Sign VST3
+        run: |
+          set -e
+          CERT_NAME=$(security find-identity -v -p codesigning build.keychain | grep "ScribeNow LLC" | sed -E 's/.*"(.+)"$/\1/' | head -n 1)
+          echo "Using cert: $CERT_NAME"
+          security unlock-keychain -p "build" build.keychain
+          security set-key-partition-list -S apple-tool:,apple: -s -k "build" build.keychain
+
+          echo "Signing VST3..."
+          codesign --force --deep --verbose --sign "$CERT_NAME" \
+            --options runtime --timestamp \
+            build/Graphverb_artefacts/Release/VST3/Graphverb.vst3
+
+          echo "Verifying signature..."
+          codesign --verify --deep --strict --verbose=4 build/Graphverb_artefacts/Release/VST3/Graphverb.vst3
+
+      - name: Sign AU
+        run: |
+          set -e
+          CERT_NAME=$(security find-identity -v -p codesigning build.keychain | grep "ScribeNow LLC" | sed -E 's/.*"(.+)"$/\1/' | head -n 1)
+          echo "Using cert: $CERT_NAME"
+          security unlock-keychain -p "build" build.keychain
+          security set-key-partition-list -S apple-tool:,apple: -s -k "build" build.keychain
+
+          echo "Signing AU..."
+          codesign --force --deep --verbose --sign "$CERT_NAME" \
+            --options runtime --timestamp \
+            build/Graphverb_artefacts/Release/AU/Graphverb.component
+
+          echo "Verifying signature..."
+          codesign --verify --deep --strict --verbose=4 build/Graphverb_artefacts/Release/AU/Graphverb.component
+
+      - name: Package for notarization
+        run: |
+          mkdir -p dist/notarization
+          cp -R build/Graphverb_artefacts/Release/Standalone/Graphverb.app dist/notarization/
+          cp -R build/Graphverb_artefacts/Release/VST3/Graphverb.vst3 dist/notarization/
+          cp -R build/Graphverb_artefacts/Release/AU/Graphverb.component dist/notarization/
+          cd dist && zip -r Graphverb-notarization.zip notarization
+
+      - name: Notarize App
+        run: |
+          xcrun notarytool submit dist/Graphverb-notarization.zip \
+            --apple-id "${{ secrets.APPLE_DEVELOPER_ID }}" \
+            --team-id "${{ secrets.APPLE_TEAM_ID }}" \
+            --password "${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}" \
+            --wait --output-format json > notarization_result.json
+
+          echo "Notarization result:"
+          cat notarization_result.json
+
+      - name: Staple Notarization Ticket
+        run: |
+          xcrun stapler staple build/Graphverb_artefacts/Release/Standalone/Graphverb.app
+          xcrun stapler staple build/Graphverb_artefacts/Release/VST3/Graphverb.vst3
+          xcrun stapler staple build/Graphverb_artefacts/Release/AU/Graphverb.component
+          xcrun stapler validate build/Graphverb_artefacts/Release/Standalone/Graphverb.app
+          xcrun stapler validate build/Graphverb_artefacts/Release/VST3/Graphverb.vst3
+          xcrun stapler validate build/Graphverb_artefacts/Release/AU/Graphverb.component
+
+      - name: Package for release
+        run: |
+          mkdir -p dist/macos
+          cp -R build/Graphverb_artefacts/Release/Standalone/Graphverb.app dist/macos/
+          cp -R build/Graphverb_artefacts/Release/VST3/Graphverb.vst3 dist/macos/
+          cp -R build/Graphverb_artefacts/Release/AU/Graphverb.component dist/macos/
+          cd dist && zip -r Graphverb-macos.zip macos
+
+      - name: Verify Gatekeeper
+        run: |
+          spctl --assess --type exec --verbose=4 dist/macos/Graphverb.app
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Graphverb-macOS
+          path: dist/Graphverb-macos.zip
+
+      - name: Cleanup Keychain
+        if: always()
+        run: |
+          security delete-keychain build.keychain
 
   build-windows:
     runs-on: windows-latest
@@ -154,11 +154,6 @@ jobs:
       - name: Install Ninja
         run: choco install ninja
 
-      - name: Decode Certificate (.pfx)
-        shell: pwsh
-        run: |
-          [System.IO.File]::WriteAllBytes("certificate.pfx", [Convert]::FromBase64String("${{ secrets.MACOS_CERTIFICATE_BASE64 }}"))
-
       - name: Set up MSVC Developer Command Prompt
         uses: ilammy/msvc-dev-cmd@v1
 
@@ -167,44 +162,6 @@ jobs:
 
       - name: Build
         run: cmake --build build --target Graphverb_All -j 6
-
-      - name: Sign binaries
-        shell: pwsh
-        env:
-          CERT_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
-        run: |
-          $ErrorActionPreference = "Stop"
-
-          Write-Host "Using fallback signtool path..."
-          $signtool = "C:\Program Files (x86)\Microsoft SDKs\ClickOnce\SignTool\signtool.exe"
-
-          if (-not (Test-Path $signtool)) {
-            Write-Error "signtool.exe not found at fallback path"
-            exit 1
-          }
-
-          Write-Host "Signing assemblies..."
-          $files = Get-ChildItem -Recurse -Path build\Graphverb_artefacts\Release -Include *.exe, *.dll -File
-          foreach ($file in $files) {
-            Write-Host "Signing $($file.FullName)..."
-            & $signtool sign /tr http://timestamp.digicert.com /td sha256 /fd sha256 /f certificate.pfx /p "$env:CERT_PASSWORD" "$($file.FullName)"
-
-            if ($LASTEXITCODE -ne 0) {
-              Write-Error "$($file.FullName) is not signed. Exit."
-              exit $LASTEXITCODE
-            }
-          }
-
-          Write-Host "Verifying signatures..."
-          foreach ($file in $files) {
-            & $signtool verify /pa /v "$($file.FullName)"
-            if ($LASTEXITCODE -ne 0) {
-              Write-Error "$($file.FullName) failed verification. Exit."
-              exit $LASTEXITCODE
-            }
-          }
-
-          Write-Host "All files signed and verified successfully."
 
       - name: Package
         run: |
@@ -217,42 +174,42 @@ jobs:
           name: Graphverb-Windows
           path: dist\Graphverb-windows.zip
 
-#  build-linux:
-#    runs-on: ubuntu-22.04
-#
-#    steps:
-#      - name: Checkout
-#        uses: actions/checkout@v4
-#
-#      - name: Install Dependencies
-#        run: |
-#          sudo apt update
-#          sudo apt install -y \
-#            cmake ninja-build build-essential \
-#            libasound2-dev libjack-jackd2-dev \
-#            libx11-dev libfreetype6-dev libfontconfig1-dev \
-#            libgl1-mesa-dev libcurl4-openssl-dev \
-#            libxrandr-dev libxinerama-dev libxcursor-dev \
-#            libxcomposite-dev libxext-dev \
-#            libgtk2.0-dev
-#
-#      - name: Configure
-#        run: |
-#          cmake -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
-#                -DCMAKE_EXE_LINKER_FLAGS="-lcurl" \
-#                -G Ninja -B build -S .
-#
-#      - name: Build
-#        run: cmake --build build --target Graphverb_All -j 6
-#
-#      - name: Package
-#        run: |
-#          mkdir -p dist/linux
-#          cp -R build/Graphverb_artefacts/Release/* dist/linux/
-#          cd dist && zip -r Graphverb-linux.zip linux
-#
-#      - name: Upload Artifacts
-#        uses: actions/upload-artifact@v4
-#        with:
-#          name: Graphverb-Linux
-#          path: dist/Graphverb-linux.zip
+  build-linux:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y \
+            cmake ninja-build build-essential \
+            libasound2-dev libjack-jackd2-dev \
+            libx11-dev libfreetype6-dev libfontconfig1-dev \
+            libgl1-mesa-dev libcurl4-openssl-dev \
+            libxrandr-dev libxinerama-dev libxcursor-dev \
+            libxcomposite-dev libxext-dev \
+            libgtk2.0-dev
+
+      - name: Configure
+        run: |
+          cmake -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+                -DCMAKE_EXE_LINKER_FLAGS="-lcurl" \
+                -G Ninja -B build -S .
+
+      - name: Build
+        run: cmake --build build --target Graphverb_All -j 6
+
+      - name: Package
+        run: |
+          mkdir -p dist/linux
+          cp -R build/Graphverb_artefacts/Release/* dist/linux/
+          cd dist && zip -r Graphverb-linux.zip linux
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Graphverb-Linux
+          path: dist/Graphverb-linux.zip
