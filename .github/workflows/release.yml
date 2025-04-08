@@ -209,8 +209,8 @@ jobs:
         run: |
           mkdir -p package
           mkdir -p dist
-          cp build/Graphverb_artefacts/Release/Standalone/Graphverb package/
-          cp build/Graphverb_artefacts/Release/VST3/Graphverb.vst3 package/
+          cp -r build/Graphverb_artefacts/Release/Standalone/Graphverb package/
+          cp -r build/Graphverb_artefacts/Release/VST3/Graphverb.vst3 package/
           cd package && zip -r ../dist/Graphverb-linux.zip *
 
       - name: Upload Artifacts
