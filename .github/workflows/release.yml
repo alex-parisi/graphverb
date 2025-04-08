@@ -1,14 +1,49 @@
 name: Graphverb Release
 
+permissions:
+  contents: write
+
 on:
   push:
-    branches: [ main ]
+    tags:
+      - 'v*'
 
 env:
   BUILD_TYPE: Release
 
 jobs:
+  check-tag:
+    runs-on: ubuntu-latest
+    outputs:
+      is_latest: ${{ steps.check_tag.outputs.is_latest }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch origin/main
+        run: git fetch origin main
+
+      - name: Ensure tag is on main
+        id: check_tag
+        run: |
+          TAG_COMMIT=$(git rev-parse ${{ github.ref_name }})
+          MAIN_COMMIT=$(git rev-parse origin/main)
+
+          echo "Tag points to:     $TAG_COMMIT"
+          echo "Main branch head:  $MAIN_COMMIT"
+
+          if [ "$TAG_COMMIT" = "$MAIN_COMMIT" ]; then
+            echo "✅ Tag points to latest commit on main."
+            echo "is_latest=true" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Tag does not point to the latest commit on main."
+            echo "is_latest=false" >> $GITHUB_OUTPUT
+          fi
+
   build-macos:
+    needs: check-tag
+    if: needs.check-tag.outputs.is_latest == 'true'
     runs-on: macos-13
 
     steps:
@@ -145,6 +180,8 @@ jobs:
           security delete-keychain build.keychain
 
   build-windows:
+    needs: check-tag
+    if: needs.check-tag.outputs.is_latest == 'true'
     runs-on: windows-latest
 
     steps:
@@ -178,6 +215,8 @@ jobs:
           path: dist\Graphverb-windows.zip
 
   build-linux:
+    needs: check-tag
+    if: needs.check-tag.outputs.is_latest == 'true'
     runs-on: ubuntu-22.04
 
     steps:
@@ -227,3 +266,43 @@ jobs:
         with:
           name: Graphverb-Linux
           path: dist/Graphverb-linux.zip
+
+  release:
+    needs: [ build-macos, build-windows, build-linux ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download macOS artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: Graphverb-macOS
+          path: artifacts/
+
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: Graphverb-Windows
+          path: artifacts/
+
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: Graphverb-Linux
+          path: artifacts/
+
+      - name: Display downloaded files
+        run: ls -R artifacts
+
+      - name: Create GitHub Release and Upload Assets
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          files: |
+            artifacts/Graphverb-macos.zip
+            artifacts/Graphverb-windows.zip
+            artifacts/Graphverb-linux.zip
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
