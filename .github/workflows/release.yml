@@ -127,7 +127,7 @@ jobs:
           cp -R build/Graphverb_artefacts/Release/Standalone/Graphverb.app dist/macos/
           cp -R build/Graphverb_artefacts/Release/VST3/Graphverb.vst3 dist/macos/
           cp -R build/Graphverb_artefacts/Release/AU/Graphverb.component dist/macos/
-          cd dist && zip -r Graphverb-macos.zip macos
+          cd dist/macos && zip -r ../Graphverb-macos.zip *
 
       - name: Verify Gatekeeper
         run: |
@@ -165,8 +165,11 @@ jobs:
 
       - name: Package
         run: |
+          mkdir package
           mkdir dist
-          powershell Compress-Archive -Path build\Graphverb_artefacts\Release\* -DestinationPath dist\Graphverb-windows.zip
+          copy build\Graphverb_artefacts\Release\Standalone\Graphverb.exe package\
+          copy build\Graphverb_artefacts\Release\VST3\Graphverb.vst3 package\
+          powershell Compress-Archive -Path package\* -DestinationPath dist\Graphverb-windows.zip
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -204,9 +207,11 @@ jobs:
 
       - name: Package
         run: |
-          mkdir -p dist/linux
-          cp -R build/Graphverb_artefacts/Release/* dist/linux/
-          cd dist && zip -r Graphverb-linux.zip linux
+          mkdir -p package
+          mkdir -p dist
+          copy build/Graphverb_artefacts/Release/Standalone/Graphverb package/
+          copy build/Graphverb_artefacts/Release/VST3/Graphverb.vst3 package/
+          cd package && zip -r ../dist/Graphverb-linux.zip *
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
