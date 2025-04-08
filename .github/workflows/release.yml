@@ -61,9 +61,49 @@ jobs:
           echo "Verifying signature..."
           codesign --verify --deep --strict --verbose=4 build/Graphverb_artefacts/Release/Standalone/Graphverb.app
 
+      - name: Sign VST3
+        run: |
+          set -e
+          CERT_NAME=$(security find-identity -v -p codesigning build.keychain | grep "ScribeNow LLC" | sed -E 's/.*"(.+)"$/\1/' | head -n 1)
+          echo "Using cert: $CERT_NAME"
+          security unlock-keychain -p "build" build.keychain
+          security set-key-partition-list -S apple-tool:,apple: -s -k "build" build.keychain
+
+          echo "Signing VST3..."
+          codesign --force --deep --verbose --sign "$CERT_NAME" \
+            --options runtime --timestamp \
+            build/Graphverb_artefacts/Release/VST3/Graphverb.vst3
+          
+          echo "Verifying signature..."
+          codesign --verify --deep --strict --verbose=4 build/Graphverb_artefacts/Release/VST3/Graphverb.vst3
+
+      - name: Sign AU
+        run: |
+          set -e
+          CERT_NAME=$(security find-identity -v -p codesigning build.keychain | grep "ScribeNow LLC" | sed -E 's/.*"(.+)"$/\1/' | head -n 1)
+          echo "Using cert: $CERT_NAME"
+          security unlock-keychain -p "build" build.keychain
+          security set-key-partition-list -S apple-tool:,apple: -s -k "build" build.keychain
+
+          echo "Signing AU..."
+          codesign --force --deep --verbose --sign "$CERT_NAME" \
+            --options runtime --timestamp \
+            build/Graphverb_artefacts/Release/AU/Graphverb.component
+          
+          echo "Verifying signature..."
+          codesign --verify --deep --strict --verbose=4 build/Graphverb_artefacts/Release/AU/Graphverb.component
+
+      - name: Package for notarization
+        run: |
+          mkdir -p dist/notarization
+          cp -R build/Graphverb_artefacts/Release/Standalone/Graphverb.app dist/notarization/
+          cp -R build/Graphverb_artefacts/Release/VST3/Graphverb.vst3 dist/notarization/
+          cp -R build/Graphverb_artefacts/Release/AU/Graphverb.component dist/notarization/
+          cd dist && zip -r Graphverb-notarization.zip notarization
+
       - name: Notarize App
         run: |
-          xcrun notarytool submit build/Graphverb_artefacts/Release/Standalone/Graphverb.app \
+          xcrun notarytool submit dist/Graphverb-notarization.zip \
             --apple-id "${{ secrets.APPLE_DEVELOPER_ID }}" \
             --team-id "${{ secrets.APPLE_TEAM_ID }}" \
             --password "${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}" \
@@ -75,16 +115,22 @@ jobs:
       - name: Staple Notarization Ticket
         run: |
           xcrun stapler staple build/Graphverb_artefacts/Release/Standalone/Graphverb.app
+          xcrun stapler staple build/Graphverb_artefacts/Release/VST3/Graphverb.vst3
+          xcrun stapler staple build/Graphverb_artefacts/Release/AU/Graphverb.component
 
-      - name: Package
+      - name: Package for release
         run: |
           mkdir -p dist/macos
           cp -R build/Graphverb_artefacts/Release/Standalone/Graphverb.app dist/macos/
+          cp -R build/Graphverb_artefacts/Release/VST3/Graphverb.vst3 dist/macos/
+          cp -R build/Graphverb_artefacts/Release/AU/Graphverb.component dist/macos/
           cd dist && zip -r Graphverb-macos.zip macos
 
       - name: Verify Gatekeeper
         run: |
           spctl --assess --type exec --verbose=4 dist/macos/Graphverb.app
+          spctl --assess --type exec --verbose=4 dist/macos/Graphverb.vst3
+          spctl --assess --type exec --verbose=4 dist/macos/Graphverb.component
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
