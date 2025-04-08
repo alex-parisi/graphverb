@@ -197,7 +197,7 @@ jobs:
 
           Write-Host "Verifying signatures..."
           foreach ($file in $files) {
-            & $signtool verify /pa /q "$($file.FullName)"
+            & $signtool verify /pa /v "$($file.FullName)"
             if ($LASTEXITCODE -ne 0) {
               Write-Error "$($file.FullName) failed verification. Exit."
               exit $LASTEXITCODE
