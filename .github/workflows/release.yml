@@ -117,6 +117,9 @@ jobs:
           xcrun stapler staple build/Graphverb_artefacts/Release/Standalone/Graphverb.app
           xcrun stapler staple build/Graphverb_artefacts/Release/VST3/Graphverb.vst3
           xcrun stapler staple build/Graphverb_artefacts/Release/AU/Graphverb.component
+          xcrun stapler validate build/Graphverb_artefacts/Release/Standalone/Graphverb.app
+          xcrun stapler validate build/Graphverb_artefacts/Release/VST3/Graphverb.vst3
+          xcrun stapler validate build/Graphverb_artefacts/Release/AU/Graphverb.component
 
       - name: Package for release
         run: |
@@ -129,8 +132,6 @@ jobs:
       - name: Verify Gatekeeper
         run: |
           spctl --assess --type exec --verbose=4 dist/macos/Graphverb.app
-          spctl --assess --type exec --verbose=4 dist/macos/Graphverb.vst3
-          spctl --assess --type exec --verbose=4 dist/macos/Graphverb.component
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
