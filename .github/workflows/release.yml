@@ -213,6 +213,15 @@ jobs:
           cp -r build/Graphverb_artefacts/Release/VST3/Graphverb.vst3 package/
           cd package && zip -r ../dist/Graphverb-linux.zip *
 
+      - name: Print SHA256
+        run: |
+          sha256sum build/Graphverb_artefacts/Release/Standalone/Graphverb > app_sha256.txt
+          sha256sum build/Graphverb_artefacts/Release/VST3/Graphverb.vst3 >> vst_sha256.txt
+          sha256sum dist/Graphverb-linux.zip >> zip_sha256.txt
+          cat app_sha256.txt
+          cat vst_sha256.txt
+          cat zip_sha256.txt
+
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
