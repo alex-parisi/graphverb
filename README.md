@@ -33,4 +33,3 @@ reverb processing using graph analysis and K-Means clustering.
 
 - [ ] Replace k-means with spectral or graph community detection
 - [ ] Host automation support (DAW parameter control)
-- [ ] Export as VST3 / AU plugin
