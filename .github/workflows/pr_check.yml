@@ -8,7 +8,7 @@ on:
 
 env:
   BUILD_TYPE: Release
-  TARGET_NAME: juce_cmake_plugin
+  TARGET_NAME: graphverb
 
 jobs:
   build-macos:
