@@ -102,15 +102,17 @@ jobs:
           echo "Signing main binary..."
           codesign --force --verbose --sign "$CERT_NAME" \
             --options runtime --timestamp \
+            --entitlements Entitlements.plist \
             "build/${{ env.TARGET_NAME }}_artefacts/Release/Standalone/${{ env.PRODUCT_NAME }}.app/Contents/MacOS/${{ env.PRODUCT_NAME }}"
 
           echo "Signing full app bundle..."
-          codesign --force --deep --verbose --sign "$CERT_NAME" \
+          codesign --force --verbose --sign "$CERT_NAME" \
             --options runtime --timestamp \
+            --entitlements Entitlements.plist \
             "build/${{ env.TARGET_NAME }}_artefacts/Release/Standalone/${{ env.PRODUCT_NAME }}.app"
 
           echo "Verifying signature..."
-          codesign --verify --deep --strict --verbose=4 "build/${{ env.TARGET_NAME }}_artefacts/Release/Standalone/${{ env.PRODUCT_NAME }}.app"
+          codesign --verify --strict --verbose=4 "build/${{ env.TARGET_NAME }}_artefacts/Release/Standalone/${{ env.PRODUCT_NAME }}.app"
 
       - name: Sign VST3
         run: |
@@ -121,12 +123,13 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple: -s -k "build" build.keychain > /dev/null 2>&1
 
           echo "Signing VST3..."
-          codesign --force --deep --verbose --sign "$CERT_NAME" \
+          codesign --force --verbose --sign "$CERT_NAME" \
             --options runtime --timestamp \
+            --entitlements Entitlements.plist \
             "build/${{ env.TARGET_NAME }}_artefacts/Release/VST3/${{ env.PRODUCT_NAME }}.vst3"
 
           echo "Verifying signature..."
-          codesign --verify --deep --strict --verbose=4 "build/${{ env.TARGET_NAME }}_artefacts/Release/VST3/${{ env.PRODUCT_NAME }}.vst3"
+          codesign --verify --strict --verbose=4 "build/${{ env.TARGET_NAME }}_artefacts/Release/VST3/${{ env.PRODUCT_NAME }}.vst3"
 
       - name: Sign AU
         run: |
@@ -137,12 +140,13 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple: -s -k "build" build.keychain > /dev/null 2>&1
 
           echo "Signing AU..."
-          codesign --force --deep --verbose --sign "$CERT_NAME" \
+          codesign --force --verbose --sign "$CERT_NAME" \
             --options runtime --timestamp \
+            --entitlements Entitlements.plist \
             "build/${{ env.TARGET_NAME }}_artefacts/Release/AU/${{ env.PRODUCT_NAME }}.component"
 
           echo "Verifying signature..."
-          codesign --verify --deep --strict --verbose=4 "build/${{ env.TARGET_NAME }}_artefacts/Release/AU/${{ env.PRODUCT_NAME }}.component"
+          codesign --verify --strict --verbose=4 "build/${{ env.TARGET_NAME }}_artefacts/Release/AU/${{ env.PRODUCT_NAME }}.component"
 
       - name: Prepare for pkgbuild
         run: |
@@ -241,12 +245,13 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple: -s -k "build" build.keychain > /dev/null 2>&1
 
           echo "Signing DMG..."
-          codesign --force --deep --verbose --sign "$CERT_NAME" \
+          codesign --force --verbose --sign "$CERT_NAME" \
             --options runtime --timestamp \
+            --entitlements Entitlements.plist \
             "pkg/${{ env.PRODUCT_NAME_U }}_App.dmg"
 
           echo "Verifying signature..."
-          codesign --verify --deep --strict --verbose=4 "pkg/${{ env.PRODUCT_NAME_U }}_App.dmg"
+          codesign --verify --strict --verbose=4 "pkg/${{ env.PRODUCT_NAME_U }}_App.dmg"
 
       - name: Notarize DMG
         run: |
