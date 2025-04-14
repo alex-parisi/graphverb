@@ -86,6 +86,7 @@ juce_add_plugin(${TARGET_NAME}
         EDITOR_WANTS_KEYBOARD_FOCUS FALSE
         MICROPHONE_PERMISSION_ENABLED TRUE
         MICROPHONE_PERMISSION_TEXT "Need access to your audio interface"
+        ICON_BIG "${CMAKE_CURRENT_SOURCE_DIR}/dist/Resources/dsp-ark-logo.png"
         COPY_PLUGIN_AFTER_BUILD TRUE
 )
 
